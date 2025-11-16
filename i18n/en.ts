@@ -1,3 +1,4 @@
+
 export const en = {
   nav: {
     home: 'Home',
@@ -65,6 +66,7 @@ export const en = {
   forms: {
     title: 'My Forms',
     scanForm: 'Scan Form',
+    addEmail: 'Add Email',
     scanNewForm: 'Scan New Form',
     selectChild: '-- Select a Child --',
     category: 'Category',
@@ -82,6 +84,7 @@ export const en = {
     saveForm: 'Save Form',
     activeTab: 'Active',
     historyTab: 'History',
+    emailsTab: 'Emails',
     noActiveForms: 'No Active Forms',
     noActiveFormsDesc: 'Scan a new form or check your history.',
     noHistory: 'No Form History',
@@ -93,6 +96,25 @@ export const en = {
     statusCompleted: 'Completed',
     statusDeleted: 'Deleted',
     for: 'For',
+  },
+  emails: {
+    title: 'Email Archive',
+    addEmail: 'Add Email',
+    addEmailTitle: 'Process New Email',
+    selectChild: '-- Select a Child --',
+    pasteEmail: 'Paste full email content here (including subject)',
+    processEmail: 'Process Email',
+    processing: 'Analyzing Email...',
+    reviewTitle: 'Review Email Summary',
+    aiLabel: 'AI-Generated Label',
+    aiSummary: 'AI-Generated Summary',
+    dueDate: 'Extracted Due Date (Optional)',
+    saveEmail: 'Save Email',
+    noEmails: 'No Emails Processed Yet',
+    noEmailsDesc: 'Add emails from school or activities to keep them organized.',
+    deleteModalTitle: 'Delete Email',
+    deleteModalMessage: 'This will hide the email from your active list. Are you sure?',
+    deleteButton: 'Delete',
   },
   tasks: {
     title: 'Tasks & Deadlines',

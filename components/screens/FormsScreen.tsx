@@ -1,7 +1,8 @@
+
 import React, { useState, useMemo } from 'react';
-import type { Form, KidProfile, FormField } from '../../types';
-import { processFormWithGemini } from '../../services/geminiService';
-import { PlusIcon, TrashIcon, ArrowUpTrayIcon } from '../Icons';
+import type { Form, KidProfile, FormField, ProcessedEmail } from '../../types';
+import { processFormWithGemini, processEmailWithGemini } from '../../services/geminiService';
+import { PlusIcon, TrashIcon, ArrowUpTrayIcon, EnvelopeIcon } from '../Icons';
 import ConfirmationModal from '../ConfirmationModal';
 import { useLanguage } from '../../contexts/LanguageContext';
 
@@ -14,6 +15,8 @@ interface FormsScreenProps {
   forms: Form[];
   setForms: React.Dispatch<React.SetStateAction<Form[]>>;
   kids: KidProfile[];
+  emails: ProcessedEmail[];
+  setEmails: React.Dispatch<React.SetStateAction<ProcessedEmail[]>>;
 }
 
 declare global {
@@ -22,7 +25,137 @@ declare global {
     }
 }
 
-const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids }) => {
+const EmailProcessingModal: React.FC<{
+    isOpen: boolean;
+    onClose: () => void;
+    kids: KidProfile[];
+    onSave: (email: ProcessedEmail) => void;
+}> = ({ isOpen, onClose, kids, onSave }) => {
+    const { t } = useLanguage();
+    const [modalState, setModalState] = useState<'input' | 'processing' | 'review'>('input');
+    const [selectedKidId, setSelectedKidId] = useState<string>('');
+    const [emailContent, setEmailContent] = useState('');
+    const [error, setError] = useState<string | null>(null);
+    const [processedData, setProcessedData] = useState<{label: string; summary: string; dueDate: string | null} | null>(null);
+
+    const resetModal = () => {
+        setModalState('input');
+        setSelectedKidId('');
+        setEmailContent('');
+        setError(null);
+        setProcessedData(null);
+        onClose();
+    }
+
+    const handleProcess = async () => {
+        if (!selectedKidId || !emailContent) {
+            setError('Please select a child and paste the email content.');
+            return;
+        }
+        const selectedKid = kids.find(k => k.id === selectedKidId);
+        if (!selectedKid) {
+            setError('Selected child not found.');
+            return;
+        }
+
+        setError(null);
+        setModalState('processing');
+
+        try {
+            const result = await processEmailWithGemini(emailContent, selectedKid.name);
+            setProcessedData(result);
+            setModalState('review');
+        } catch(e: any) {
+            setError(e.message || "An unknown error occurred while processing the email.");
+            setModalState('input');
+        }
+    }
+
+    const handleSave = () => {
+        if (!processedData) return;
+        const now = new Date().toISOString();
+        const newEmail: ProcessedEmail = {
+            id: Date.now().toString(),
+            kidId: selectedKidId,
+            originalContent: emailContent,
+            label: processedData.label,
+            summary: processedData.summary,
+            dueDate: processedData.dueDate || undefined,
+            createdAt: now,
+            updatedAt: now,
+            status: 'active'
+        };
+        onSave(newEmail);
+        resetModal();
+    }
+    
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+            <div className="bg-brand-surface rounded-lg p-8 w-full max-w-2xl max-h-full overflow-y-auto">
+                {modalState === 'input' && (
+                    <>
+                        <h2 className="text-2xl font-bold mb-6">{t('emails.addEmailTitle')}</h2>
+                        {error && <p className="bg-red-900 border border-red-700 text-red-200 p-3 rounded-md mb-4">{error}</p>}
+                        <div className="space-y-4">
+                           <select value={selectedKidId} onChange={(e) => setSelectedKidId(e.target.value)} className="w-full bg-brand-dark border border-brand-border rounded-md px-3 py-2 text-brand-light focus:outline-none focus:ring-2 focus:ring-brand-primary">
+                               <option value="">{t('emails.selectChild')}</option>
+                               {kids.map(kid => <option key={kid.id} value={kid.id}>{kid.name}</option>)}
+                           </select>
+                           <textarea 
+                                value={emailContent}
+                                onChange={e => setEmailContent(e.target.value)}
+                                placeholder={t('emails.pasteEmail')}
+                                rows={10}
+                                className="w-full bg-brand-dark border border-brand-border rounded-md px-3 py-2 text-brand-light focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                           />
+                        </div>
+                        <div className="flex justify-end space-x-4 pt-6">
+                            <button onClick={resetModal} className="px-4 py-2 rounded-md text-brand-light bg-brand-border hover:bg-opacity-80 transition-colors">{t('forms.cancel')}</button>
+                            <button onClick={handleProcess} disabled={!selectedKidId || !emailContent} className="px-4 py-2 rounded-md text-white bg-brand-primary hover:bg-brand-primary-hover transition-colors disabled:bg-brand-border disabled:cursor-not-allowed">{t('emails.processEmail')}</button>
+                        </div>
+                    </>
+                )}
+                {modalState === 'processing' && (
+                     <div className="text-center py-16">
+                        <h2 className="text-2xl font-semibold text-brand-primary">{t('emails.processing')}</h2>
+                        <p className="text-brand-secondary mt-2">{t('forms.aiAssist')}</p>
+                        <div className="mt-8">
+                           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary mx-auto"></div>
+                        </div>
+                    </div>
+                )}
+                {modalState === 'review' && processedData && (
+                    <>
+                        <h2 className="text-2xl font-bold mb-6">{t('emails.reviewTitle')}</h2>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-brand-secondary mb-1">{t('emails.aiLabel')}</label>
+                                <input type="text" value={processedData.label} onChange={e => setProcessedData({...processedData, label: e.target.value})} className="w-full bg-brand-dark border border-brand-border rounded-md px-3 py-2 text-brand-light focus:outline-none focus:ring-2 focus:ring-brand-primary"/>
+                           </div>
+                           <div>
+                                <label className="block text-sm font-medium text-brand-secondary mb-1">{t('emails.aiSummary')}</label>
+                                <textarea rows={5} value={processedData.summary} onChange={e => setProcessedData({...processedData, summary: e.target.value})} className="w-full bg-brand-dark border border-brand-border rounded-md px-3 py-2 text-brand-light focus:outline-none focus:ring-2 focus:ring-brand-primary"/>
+                           </div>
+                           <div>
+                                <label className="block text-sm font-medium text-brand-secondary mb-1">{t('emails.dueDate')}</label>
+                                <input type="date" value={processedData.dueDate || ''} onChange={e => setProcessedData({...processedData, dueDate: e.target.value})} className="w-full bg-brand-dark border border-brand-border rounded-md px-3 py-2 text-brand-light focus:outline-none focus:ring-2 focus:ring-brand-primary"/>
+                           </div>
+                        </div>
+                        <div className="flex justify-end space-x-4 pt-6">
+                            <button onClick={resetModal} className="px-4 py-2 rounded-md text-brand-light bg-brand-border hover:bg-opacity-80 transition-colors">{t('forms.discard')}</button>
+                            <button onClick={handleSave} className="px-4 py-2 rounded-md text-white bg-brand-primary hover:bg-brand-primary-hover transition-colors">{t('emails.saveEmail')}</button>
+                        </div>
+                    </>
+                )}
+            </div>
+        </div>
+    );
+};
+
+
+const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails, setEmails }) => {
   const { language, t } = useLanguage();
   const [screenState, setScreenState] = useState<FormScreenState>('list');
   const [currentForm, setCurrentForm] = useState<ReviewingForm>({});
@@ -33,7 +166,8 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids }) => {
   const [category, setCategory] = useState<string>(formCategories[0]);
   const [reviewLanguage, setReviewLanguage] = useState<'en' | 'es'>(language);
   const [modalState, setModalState] = useState<{ isOpen: boolean; title: string; message: string; action: (() => void) | null; }>({ isOpen: false, title: '', message: '', action: null });
-  const [view, setView] = useState<'active' | 'history'>('active');
+  const [view, setView] = useState<'active' | 'history' | 'emails'>('active');
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -42,6 +176,7 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids }) => {
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
       };
+      // Corrected typo from `readDataURL` to `readAsDataURL`
       reader.readAsDataURL(file);
     }
   };
@@ -107,6 +242,10 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids }) => {
 
     setForms(prev => [finalForm, ...prev]);
     resetState();
+  };
+  
+  const handleSaveEmail = (email: ProcessedEmail) => {
+    setEmails(prev => [email, ...prev]);
   };
 
   const handleExportPdf = () => {
@@ -190,18 +329,33 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids }) => {
     setForms(prev => prev.map(f => f.id === formId ? { ...f, status: 'deleted', updatedAt: new Date().toISOString() } : f));
     setModalState({ isOpen: false, title: '', message: '', action: null });
   };
+  
+  const handleDeleteEmail = (emailId: string) => {
+    setEmails(prev => prev.map(e => e.id === emailId ? { ...e, status: 'deleted', updatedAt: new Date().toISOString() } : e));
+    setModalState({ isOpen: false, title: '', message: '', action: null });
+  };
 
-  const openDeleteModal = (formId: string) => {
-    setModalState({
-        isOpen: true,
-        title: t('forms.deleteModalTitle'),
-        message: t('forms.deleteModalMessage'),
-        action: () => handleDeleteForm(formId)
-    });
+  const openDeleteModal = (id: string, type: 'form' | 'email') => {
+    if (type === 'form') {
+        setModalState({
+            isOpen: true,
+            title: t('forms.deleteModalTitle'),
+            message: t('forms.deleteModalMessage'),
+            action: () => handleDeleteForm(id)
+        });
+    } else {
+        setModalState({
+            isOpen: true,
+            title: t('emails.deleteModalTitle'),
+            message: t('emails.deleteModalMessage'),
+            action: () => handleDeleteEmail(id)
+        });
+    }
   };
   
   const activeForms = useMemo(() => forms.filter(form => form.status === 'pending'), [forms]);
   const historyForms = useMemo(() => forms.filter(form => form.status === 'completed' || form.status === 'deleted').sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()), [forms]);
+  const activeEmails = useMemo(() => emails.filter(email => email.status === 'active').sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()), [emails]);
 
   const groupedActiveForms = useMemo(() => {
     return activeForms.reduce((acc, form) => {
@@ -299,14 +453,23 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids }) => {
                 <>
                     <div className="flex justify-between items-center mb-4">
                         <h1 className="text-3xl font-bold">{t('forms.title')}</h1>
-                        <button onClick={() => setScreenState('upload')} className="flex items-center gap-2 px-4 py-2 rounded-md text-white bg-brand-primary hover:bg-brand-primary-hover transition-colors">
-                            <PlusIcon /><span>{t('forms.scanForm')}</span>
-                        </button>
+                        {view === 'emails' ? (
+                            <button onClick={() => setIsEmailModalOpen(true)} className="flex items-center gap-2 px-4 py-2 rounded-md text-white bg-brand-primary hover:bg-brand-primary-hover transition-colors">
+                                <PlusIcon /><span>{t('forms.addEmail')}</span>
+                            </button>
+                        ) : (
+                            <button onClick={() => setScreenState('upload')} className="flex items-center gap-2 px-4 py-2 rounded-md text-white bg-brand-primary hover:bg-brand-primary-hover transition-colors">
+                                <PlusIcon /><span>{t('forms.scanForm')}</span>
+                            </button>
+                        )}
                     </div>
                     
                     <div className="flex border-b border-brand-border mb-6">
                         <button onClick={() => setView('active')} className={`px-4 py-2 text-sm font-medium transition-colors ${view === 'active' ? 'border-b-2 border-brand-primary text-brand-primary' : 'text-brand-secondary hover:text-brand-light'}`}>
                             {t('forms.activeTab')} ({activeForms.length})
+                        </button>
+                        <button onClick={() => setView('emails')} className={`px-4 py-2 text-sm font-medium transition-colors ${view === 'emails' ? 'border-b-2 border-brand-primary text-brand-primary' : 'text-brand-secondary hover:text-brand-light'}`}>
+                            {t('forms.emailsTab')} ({activeEmails.length})
                         </button>
                         <button onClick={() => setView('history')} className={`px-4 py-2 text-sm font-medium transition-colors ${view === 'history' ? 'border-b-2 border-brand-primary text-brand-primary' : 'text-brand-secondary hover:text-brand-light'}`}>
                             {t('forms.historyTab')} ({historyForms.length})
@@ -331,7 +494,7 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids }) => {
                                                             <p className="text-sm text-brand-secondary mt-2">{t('forms.due')}: {form.dueDate ? new Date(form.dueDate).toLocaleDateString() : 'N/A'}</p>
                                                         </div>
                                                     </div>
-                                                    <button className="p-2 text-brand-secondary hover:text-red-500 flex-shrink-0 ml-4" onClick={() => openDeleteModal(form.id)}><TrashIcon /></button>
+                                                    <button className="p-2 text-brand-secondary hover:text-red-500 flex-shrink-0 ml-4" onClick={() => openDeleteModal(form.id, 'form')}><TrashIcon /></button>
                                                 </div>
                                             ))}
                                             </div>
@@ -342,6 +505,38 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids }) => {
                                 <div className="text-center py-16 px-4 bg-brand-surface rounded-lg border-2 border-dashed border-brand-border">
                                     <h3 className="text-xl font-semibold text-brand-light">{t('forms.noActiveForms')}</h3>
                                     <p className="text-brand-secondary mt-2">{t('forms.noActiveFormsDesc')}</p>
+                                </div>
+                            )}
+                        </>
+                    )}
+
+                     {view === 'emails' && (
+                        <>
+                            {activeEmails.length > 0 ? (
+                                <div className="space-y-4">
+                                    {activeEmails.map(email => {
+                                        const kidName = kids.find(k => k.id === email.kidId)?.name || 'Unknown';
+                                        return (
+                                            <div key={email.id} className="bg-brand-surface p-4 rounded-lg border border-brand-border flex items-center justify-between">
+                                                <div className="flex items-center gap-4 flex-grow min-w-0">
+                                                    <div className="w-16 h-16 bg-brand-dark rounded-md flex-shrink-0 flex items-center justify-center">
+                                                        <div className="w-8 h-8 text-brand-secondary"><EnvelopeIcon /></div>
+                                                    </div>
+                                                    <div className="flex-grow min-w-0">
+                                                        <p className="font-semibold text-brand-light truncate" title={email.label}>{email.label}</p>
+                                                        <p className="text-sm text-brand-secondary mt-1 italic truncate">"{email.summary}"</p>
+                                                        <p className="text-sm text-brand-secondary mt-2">{t('forms.for')} {kidName} {email.dueDate ? `· ${t('forms.due')}: ${new Date(email.dueDate).toLocaleDateString()}` : ''}</p>
+                                                    </div>
+                                                </div>
+                                                <button className="p-2 text-brand-secondary hover:text-red-500 flex-shrink-0 ml-4" onClick={() => openDeleteModal(email.id, 'email')}><TrashIcon /></button>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            ) : (
+                                <div className="text-center py-16 px-4 bg-brand-surface rounded-lg border-2 border-dashed border-brand-border">
+                                    <h3 className="text-xl font-semibold text-brand-light">{t('emails.noEmails')}</h3>
+                                    <p className="text-brand-secondary mt-2">{t('emails.noEmailsDesc')}</p>
                                 </div>
                             )}
                         </>
@@ -396,7 +591,17 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids }) => {
     }
   };
 
-  return <div>{renderContent()}</div>;
+  return (
+    <div>
+        {renderContent()}
+        <EmailProcessingModal 
+            isOpen={isEmailModalOpen}
+            onClose={() => setIsEmailModalOpen(false)}
+            kids={kids}
+            onSave={handleSaveEmail}
+        />
+    </div>
+  );
 };
 
 export default FormsScreen;

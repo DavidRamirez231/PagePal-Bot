@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { HomeIcon, DocumentTextIcon, UserGroupIcon, CalendarIcon, Cog6ToothIcon } from './components/Icons';
 import BottomNav from './components/BottomNav';
@@ -7,7 +8,7 @@ import FormsScreen from './components/screens/FormsScreen';
 import TasksScreen from './components/screens/TasksScreen';
 import SettingsScreen from './components/screens/SettingsScreen';
 import AuthScreen from './components/screens/AuthScreen';
-import type { KidProfile, Form, Task, User } from './types';
+import type { KidProfile, Form, Task, User, ProcessedEmail } from './types';
 import { Screen } from './types';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 
@@ -16,6 +17,7 @@ const AppContent: React.FC = () => {
   const [activeScreen, setActiveScreen] = useState<Screen>(Screen.Home);
   const [kids, setKids] = useState<KidProfile[]>([]);
   const [forms, setForms] = useState<Form[]>([]);
+  const [emails, setEmails] = useState<ProcessedEmail[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -49,6 +51,9 @@ const AppContent: React.FC = () => {
             });
             setForms(formsWithDefaults);
         }
+
+        const storedEmails = localStorage.getItem(`formbot-emails-${user.id}`);
+        if (storedEmails) setEmails(JSON.parse(storedEmails));
       }
     } catch (error) {
       console.error("Failed to parse data from localStorage", error);
@@ -63,19 +68,37 @@ const AppContent: React.FC = () => {
 
   useEffect(() => {
     if (isLoggedIn && currentUser) {
+        localStorage.setItem(`formbot-emails-${currentUser.id}`, JSON.stringify(emails));
+    }
+  }, [emails, isLoggedIn, currentUser]);
+
+  useEffect(() => {
+    if (isLoggedIn && currentUser) {
         localStorage.setItem(`formbot-forms-${currentUser.id}`, JSON.stringify(forms));
     }
-    const newTasks = forms
+    const formTasks = forms
       .filter(form => form.dueDate && form.status === 'pending')
       .map(form => ({
-        id: form.id,
+        id: `form-${form.id}`,
         title: form.formName,
         dueDate: form.dueDate,
         formId: form.id,
-      }))
-      .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
-    setTasks(newTasks);
-  }, [forms, kids, isLoggedIn, currentUser]);
+      }));
+
+    const emailTasks = emails
+      .filter(email => email.dueDate && email.status === 'active')
+      .map(email => ({
+          id: `email-${email.id}`,
+          title: email.label,
+          dueDate: email.dueDate!,
+          formId: email.id,
+      }));
+
+    const allTasks = [...formTasks, ...emailTasks]
+        .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+
+    setTasks(allTasks);
+  }, [forms, emails, isLoggedIn, currentUser]);
 
   const handleLogin = (user: User) => {
     setCurrentUser(user);
@@ -85,6 +108,8 @@ const AppContent: React.FC = () => {
     if (storedKids) setKids(JSON.parse(storedKids));
     const storedForms = localStorage.getItem(`formbot-forms-${user.id}`);
     if (storedForms) setForms(JSON.parse(storedForms));
+    const storedEmails = localStorage.getItem(`formbot-emails-${user.id}`);
+    if (storedEmails) setEmails(JSON.parse(storedEmails));
   };
 
   const handleLogout = () => {
@@ -92,6 +117,7 @@ const AppContent: React.FC = () => {
     setCurrentUser(null);
     setKids([]);
     setForms([]);
+    setEmails([]);
     setTasks([]);
     setActiveScreen(Screen.Home);
     localStorage.removeItem('formbot-currentUser');
@@ -102,16 +128,16 @@ const AppContent: React.FC = () => {
       case Screen.Kids:
         return <KidsScreen kids={kids} setKids={setKids} />;
       case Screen.Forms:
-        return <FormsScreen forms={forms} setForms={setForms} kids={kids} />;
+        return <FormsScreen forms={forms} setForms={setForms} kids={kids} emails={emails} setEmails={setEmails} />;
       case Screen.Tasks:
-        return <TasksScreen tasks={tasks} forms={forms} kids={kids} setForms={setForms} />;
+        return <TasksScreen tasks={tasks} forms={forms} kids={kids} setForms={setForms} emails={emails} setEmails={setEmails} />;
       case Screen.Settings:
         return <SettingsScreen currentUser={currentUser} onLogout={handleLogout} />;
       case Screen.Home:
       default:
         return <HomeScreen setActiveScreen={setActiveScreen} tasks={tasks} currentUser={currentUser} />;
     }
-  }, [activeScreen, kids, forms, tasks, currentUser]);
+  }, [activeScreen, kids, forms, tasks, currentUser, emails]);
 
   const navItems = [
     { id: Screen.Home, label: t('nav.home'), icon: <HomeIcon /> },

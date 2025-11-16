@@ -111,3 +111,57 @@ export const processFormWithGemini = async (
         throw new Error("Failed to analyze the form. The AI model might be busy or the image could not be processed. Please try again.");
     }
 };
+
+
+export const processEmailWithGemini = async (
+    emailContent: string,
+    kidName: string
+): Promise<{ label: string; summary: string; dueDate: string | null }> => {
+    const model = 'gemini-2.5-flash';
+    const prompt = `
+      You are an expert at analyzing communications for parents.
+      Analyze the following email content which is for a child named ${kidName}.
+
+      First, create a short, descriptive label for the email (max 10 words). Example: "Permission Slip for Zoo Field Trip".
+      
+      Second, provide a concise summary of the key information and any actions the parent needs to take.
+      
+      Third, identify if there is a specific due date or event date mentioned. If so, return it in YYYY-MM-DD format. If not, return null.
+
+      Email content:
+      """
+      ${emailContent}
+      """
+    `;
+
+    try {
+        const response = await ai.models.generateContent({
+            model,
+            contents: { parts: [{ text: prompt }] },
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        label: { type: Type.STRING, description: "A short, descriptive label for the email." },
+                        summary: { type: Type.STRING, description: "A concise summary of the email's content and required actions." },
+                        dueDate: { type: Type.STRING, description: "The due date or event date in YYYY-MM-DD format, or null if not present." }
+                    },
+                    required: ['label', 'summary']
+                }
+            }
+        });
+
+        const jsonText = response.text.trim();
+        const parsedJson = JSON.parse(jsonText);
+        
+        return {
+            label: parsedJson.label || 'Untitled Email',
+            summary: parsedJson.summary || 'No summary could be generated.',
+            dueDate: parsedJson.dueDate || null
+        };
+    } catch (error) {
+        console.error("Error processing email with Gemini:", error);
+        throw new Error("Failed to analyze the email. The AI model might be busy or the content could not be processed. Please try again.");
+    }
+};

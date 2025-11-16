@@ -1,3 +1,4 @@
+
 export const es = {
   nav: {
     home: 'Inicio',
@@ -65,6 +66,7 @@ export const es = {
   forms: {
     title: 'Mis Formularios',
     scanForm: 'Escanear Formulario',
+    addEmail: 'Añadir Correo',
     scanNewForm: 'Escanear Nuevo Formulario',
     selectChild: '-- Selecciona un Niño --',
     category: 'Categoría',
@@ -82,6 +84,7 @@ export const es = {
     saveForm: 'Guardar Formulario',
     activeTab: 'Activos',
     historyTab: 'Historial',
+    emailsTab: 'Correos',
     noActiveForms: 'No hay Formularios Activos',
     noActiveFormsDesc: 'Escanea un nuevo formulario o revisa tu historial.',
     noHistory: 'Sin Historial de Formularios',
@@ -93,6 +96,25 @@ export const es = {
     statusCompleted: 'Completado',
     statusDeleted: 'Eliminado',
     for: 'Para',
+  },
+  emails: {
+    title: 'Archivo de Correos',
+    addEmail: 'Añadir Correo',
+    addEmailTitle: 'Procesar Nuevo Correo',
+    selectChild: '-- Selecciona un Niño --',
+    pasteEmail: 'Pega el contenido completo del correo aquí (incluido el asunto)',
+    processEmail: 'Procesar Correo',
+    processing: 'Analizando Correo...',
+    reviewTitle: 'Revisar Resumen del Correo',
+    aiLabel: 'Etiqueta Generada por IA',
+    aiSummary: 'Resumen Generado por IA',
+    dueDate: 'Fecha de Entrega Extraída (Opcional)',
+    saveEmail: 'Guardar Correo',
+    noEmails: 'Aún no hay correos procesados',
+    noEmailsDesc: 'Añade correos de la escuela o actividades para mantenerlos organizados.',
+    deleteModalTitle: 'Eliminar Correo',
+    deleteModalMessage: 'Esto ocultará el correo de tu lista activa. ¿Estás seguro?',
+    deleteButton: 'Eliminar',
   },
   tasks: {
     title: 'Tareas y Vencimientos',

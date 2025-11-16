@@ -37,6 +37,18 @@ export interface Form {
   updatedAt: string;
 }
 
+export interface ProcessedEmail {
+  id: string;
+  kidId: string;
+  originalContent: string;
+  label: string;
+  summary: string;
+  dueDate?: string;
+  createdAt: string;
+  status: 'active' | 'deleted';
+  updatedAt: string;
+}
+
 export interface Task {
   id: string;
   title: string;
