@@ -1,20 +1,25 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# PagePal
 
-# Run and deploy your AI Studio app
+## Description
 
-This contains everything you need to run your app locally.
+PagePal is a smart assistant for parents designed to simplify the process of handling school forms. It scans, auto-fills, and manages paperwork, helping you stay organized and on top of deadlines.
 
-View your app in AI Studio: https://ai.studio/apps/drive/1wOGa16YbGtCW8R5DZ730_vs5QXLG385w
+## Key Features
 
-## Run Locally
+*   **AI-Powered Form Scanning**: Upload a picture of a form, and our AI, powered by the Google Gemini API, will analyze it to extract fields and understand its purpose.
+*   **Kid Profiles**: Create and manage detailed profiles for each of your children. This information is used to automatically fill out forms.
+*   **Automatic Form Filling**: The app intelligently matches information from your child's profile to the fields on the form, saving you time and effort.
+*   **Task and Deadline Tracking**: Due dates are automatically identified and added to a task list, ensuring you never miss an important deadline.
+*   **Organized Form Library**: All your forms—active, completed, and deleted—are stored in an organized and easily accessible library.
+*   **PDF Export**: Export your filled forms as a PDF, ready for printing or digital submission.
+*   **Bilingual Support**: The user interface and AI-generated summaries are available in both English and Spanish.
 
-**Prerequisites:**  Node.js
+## Technology Stack
 
+*   **Framework**: React with TypeScript
+*   **AI Model**: Google Gemini API
+*   **Styling**: Tailwind CSS
+*   **Client-side Storage**: Local Storage
+*   **PDF Generation**: jsPDF
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+This application is designed to run entirely in the browser, ensuring your data remains private and secure on your device.
