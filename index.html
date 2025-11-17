@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>FormBot - Your Personal Forms Assistant</title>
+    <title>PagePal - Your Personal Forms Assistant</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -22,6 +22,15 @@
             },
             fontFamily: {
               sans: ['Inter', 'sans-serif'],
+            },
+            keyframes: {
+              'fade-in-scale': {
+                '0%': { opacity: '0', transform: 'scale(0.95)' },
+                '100%': { opacity: '1', transform: 'scale(1)' },
+              },
+            },
+            animation: {
+              'fade-in-scale': 'fade-in-scale 1.5s ease-out forwards',
             },
           },
         },

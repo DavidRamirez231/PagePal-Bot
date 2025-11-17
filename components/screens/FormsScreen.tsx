@@ -154,6 +154,45 @@ const EmailProcessingModal: React.FC<{
     );
 };
 
+const EmailDetailModal: React.FC<{
+    email: ProcessedEmail;
+    kidName: string;
+    onClose: () => void;
+}> = ({ email, kidName, onClose }) => {
+    const { t } = useLanguage();
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4" aria-modal="true" role="dialog">
+            <div className="bg-brand-surface rounded-lg p-8 w-full max-w-2xl max-h-[90vh] flex flex-col shadow-xl">
+                <h2 className="text-2xl font-bold mb-2 text-brand-light">{email.label}</h2>
+                <p className="text-brand-secondary mb-4">
+                    {t('forms.for')} {kidName}
+                    {email.dueDate && (
+                        <span className="ml-2 pl-2 border-l border-brand-border text-brand-primary font-medium">
+                            {t('forms.due')}: {new Date(email.dueDate).toLocaleDateString()}
+                        </span>
+                    )}
+                </p>
+                
+                <div className="flex-grow overflow-y-auto pr-2 space-y-6">
+                    <div>
+                        <h3 className="text-lg font-semibold text-brand-primary mb-2">{t('emails.aiSummary')}</h3>
+                        <p className="text-brand-light italic bg-brand-dark p-4 rounded-md whitespace-pre-wrap">{email.summary}</p>
+                    </div>
+                    <div>
+                        <h3 className="text-lg font-semibold text-brand-primary mb-2">{t('emails.originalContent')}</h3>
+                        <pre className="text-sm text-brand-secondary bg-brand-dark p-4 rounded-md whitespace-pre-wrap font-sans">{email.originalContent}</pre>
+                    </div>
+                </div>
+
+                <div className="flex justify-end pt-6 border-t border-brand-border mt-6">
+                    <button onClick={onClose} className="px-6 py-2 rounded-md text-white bg-brand-primary hover:bg-brand-primary-hover transition-colors">{t('emails.close')}</button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 
 const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails, setEmails }) => {
   const { language, t } = useLanguage();
@@ -168,6 +207,7 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
   const [modalState, setModalState] = useState<{ isOpen: boolean; title: string; message: string; action: (() => void) | null; }>({ isOpen: false, title: '', message: '', action: null });
   const [view, setView] = useState<'active' | 'history' | 'emails'>('active');
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [viewingEmail, setViewingEmail] = useState<ProcessedEmail | null>(null);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -517,8 +557,8 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
                                     {activeEmails.map(email => {
                                         const kidName = kids.find(k => k.id === email.kidId)?.name || 'Unknown';
                                         return (
-                                            <div key={email.id} className="bg-brand-surface p-4 rounded-lg border border-brand-border flex items-center justify-between">
-                                                <div className="flex items-center gap-4 flex-grow min-w-0">
+                                            <div key={email.id} className="bg-brand-surface rounded-lg border border-brand-border flex items-center justify-between transition-colors hover:border-brand-primary">
+                                                <button onClick={() => setViewingEmail(email)} className="p-4 flex items-center gap-4 flex-grow min-w-0 text-left">
                                                     <div className="w-16 h-16 bg-brand-dark rounded-md flex-shrink-0 flex items-center justify-center">
                                                         <div className="w-8 h-8 text-brand-secondary"><EnvelopeIcon /></div>
                                                     </div>
@@ -527,8 +567,8 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
                                                         <p className="text-sm text-brand-secondary mt-1 italic truncate">"{email.summary}"</p>
                                                         <p className="text-sm text-brand-secondary mt-2">{t('forms.for')} {kidName} {email.dueDate ? `· ${t('forms.due')}: ${new Date(email.dueDate).toLocaleDateString()}` : ''}</p>
                                                     </div>
-                                                </div>
-                                                <button className="p-2 text-brand-secondary hover:text-red-500 flex-shrink-0 ml-4" onClick={() => openDeleteModal(email.id, 'email')}><TrashIcon /></button>
+                                                </button>
+                                                <button className="p-2 text-brand-secondary hover:text-red-500 flex-shrink-0 mx-4" onClick={() => openDeleteModal(email.id, 'email')}><TrashIcon /></button>
                                             </div>
                                         )
                                     })}
@@ -600,6 +640,13 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
             kids={kids}
             onSave={handleSaveEmail}
         />
+        {viewingEmail && (
+            <EmailDetailModal
+                email={viewingEmail}
+                kidName={kids.find(k => k.id === viewingEmail.kidId)?.name || 'Unknown'}
+                onClose={() => setViewingEmail(null)}
+            />
+        )}
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { User } from '../../types';
 import { useLanguage } from '../../contexts/LanguageContext';
 
@@ -13,6 +13,14 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [viewState, setViewState] = useState<'welcome' | 'auth'>('welcome');
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setViewState('auth');
+        }, 2500);
+        return () => clearTimeout(timer);
+    }, []);
 
     const handleSignUp = (e: React.FormEvent) => {
         e.preventDefault();
@@ -27,7 +35,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
             name,
             email
         };
-        localStorage.setItem(`formbot-user-${email}`, JSON.stringify({ ...newUser, password }));
+        localStorage.setItem(`pagepal-user-${email}`, JSON.stringify({ ...newUser, password }));
         
         onLogin(newUser);
     };
@@ -40,7 +48,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
             return;
         }
         
-        const storedUserString = localStorage.getItem(`formbot-user-${email}`);
+        const storedUserString = localStorage.getItem(`pagepal-user-${email}`);
         if (storedUserString) {
             const storedUser = JSON.parse(storedUserString);
             if (storedUser.password === password) {
@@ -57,8 +65,12 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
     const inputClass = "w-full bg-brand-dark border border-brand-border rounded-md px-3 py-2 text-brand-light focus:outline-none focus:ring-2 focus:ring-brand-primary";
 
     return (
-        <div className="min-h-screen bg-brand-dark flex flex-col justify-center items-center p-4">
-            <div className="w-full max-w-sm">
+        <div className="min-h-screen bg-brand-dark flex flex-col justify-center items-center p-4 relative overflow-hidden">
+            <div className={`absolute inset-0 flex flex-col justify-center items-center transition-opacity duration-1000 ease-in-out ${viewState === 'welcome' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                 <h1 className="text-5xl font-bold text-brand-primary animate-fade-in-scale">Welcome to {t('auth.appName')}</h1>
+            </div>
+            
+            <div className={`w-full max-w-sm transition-opacity duration-1000 ease-in-out ${viewState === 'auth' ? 'opacity-100' : 'opacity-0'}`}>
                 <div className="text-center mb-8">
                     <h1 className="text-4xl font-bold text-brand-primary">{t('auth.appName')}</h1>
                     <p className="text-brand-secondary mt-2">{t('auth.appDesc')}</p>

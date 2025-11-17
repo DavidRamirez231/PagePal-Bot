@@ -55,10 +55,10 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ currentUser, onLogout }
         </div>
       </div>
 
-      <div className="mt-8">
+      <div className="mt-8 flex justify-center">
         <button
           onClick={onLogout}
-          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-md text-white bg-red-600 hover:bg-red-700 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 rounded-md text-red-500 hover:bg-red-500/10 transition-colors"
         >
           <ArrowRightOnRectangleIcon />
           <span>{t('settings.logout')}</span>

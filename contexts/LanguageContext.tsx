@@ -27,14 +27,14 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [language, setLanguageState] = useState<Language>('en');
 
   useEffect(() => {
-    const storedLang = localStorage.getItem('formbot-language');
+    const storedLang = localStorage.getItem('pagepal-language');
     if (storedLang === 'en' || storedLang === 'es') {
       setLanguageState(storedLang);
     }
   }, []);
 
   const setLanguage = (lang: Language) => {
-    localStorage.setItem('formbot-language', lang);
+    localStorage.setItem('pagepal-language', lang);
     setLanguageState(lang);
   };
 

@@ -1,4 +1,3 @@
-
 export const es = {
   nav: {
     home: 'Inicio',
@@ -8,7 +7,7 @@ export const es = {
     settings: 'Ajustes',
   },
   auth: {
-    appName: 'FormBot',
+    appName: 'PagePal',
     appDesc: 'Tu asistente personal de formularios.',
     login: 'Iniciar Sesión',
     signup: 'Registrarse',
@@ -115,6 +114,8 @@ export const es = {
     deleteModalTitle: 'Eliminar Correo',
     deleteModalMessage: 'Esto ocultará el correo de tu lista activa. ¿Estás seguro?',
     deleteButton: 'Eliminar',
+    originalContent: 'Contenido Original',
+    close: 'Cerrar',
   },
   tasks: {
     title: 'Tareas y Vencimientos',

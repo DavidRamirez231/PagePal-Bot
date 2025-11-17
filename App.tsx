@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { HomeIcon, DocumentTextIcon, UserGroupIcon, CalendarIcon, Cog6ToothIcon } from './components/Icons';
 import BottomNav from './components/BottomNav';
@@ -24,16 +23,16 @@ const AppContent: React.FC = () => {
 
   useEffect(() => {
     try {
-      const storedUser = localStorage.getItem('formbot-currentUser');
+      const storedUser = localStorage.getItem('pagepal-currentUser');
       if (storedUser) {
         const user: User = JSON.parse(storedUser);
         setCurrentUser(user);
         setIsLoggedIn(true);
 
-        const storedKids = localStorage.getItem(`formbot-kids-${user.id}`);
+        const storedKids = localStorage.getItem(`pagepal-kids-${user.id}`);
         if (storedKids) setKids(JSON.parse(storedKids));
   
-        const storedForms = localStorage.getItem(`formbot-forms-${user.id}`);
+        const storedForms = localStorage.getItem(`pagepal-forms-${user.id}`);
         if (storedForms) {
             const parsedForms: any[] = JSON.parse(storedForms);
             const formsWithDefaults = parsedForms.map(form => {
@@ -52,7 +51,7 @@ const AppContent: React.FC = () => {
             setForms(formsWithDefaults);
         }
 
-        const storedEmails = localStorage.getItem(`formbot-emails-${user.id}`);
+        const storedEmails = localStorage.getItem(`pagepal-emails-${user.id}`);
         if (storedEmails) setEmails(JSON.parse(storedEmails));
       }
     } catch (error) {
@@ -62,19 +61,19 @@ const AppContent: React.FC = () => {
 
   useEffect(() => {
     if (isLoggedIn && currentUser) {
-        localStorage.setItem(`formbot-kids-${currentUser.id}`, JSON.stringify(kids));
+        localStorage.setItem(`pagepal-kids-${currentUser.id}`, JSON.stringify(kids));
     }
   }, [kids, isLoggedIn, currentUser]);
 
   useEffect(() => {
     if (isLoggedIn && currentUser) {
-        localStorage.setItem(`formbot-emails-${currentUser.id}`, JSON.stringify(emails));
+        localStorage.setItem(`pagepal-emails-${currentUser.id}`, JSON.stringify(emails));
     }
   }, [emails, isLoggedIn, currentUser]);
 
   useEffect(() => {
     if (isLoggedIn && currentUser) {
-        localStorage.setItem(`formbot-forms-${currentUser.id}`, JSON.stringify(forms));
+        localStorage.setItem(`pagepal-forms-${currentUser.id}`, JSON.stringify(forms));
     }
     const formTasks = forms
       .filter(form => form.dueDate && form.status === 'pending')
@@ -103,12 +102,12 @@ const AppContent: React.FC = () => {
   const handleLogin = (user: User) => {
     setCurrentUser(user);
     setIsLoggedIn(true);
-    localStorage.setItem('formbot-currentUser', JSON.stringify(user));
-    const storedKids = localStorage.getItem(`formbot-kids-${user.id}`);
+    localStorage.setItem('pagepal-currentUser', JSON.stringify(user));
+    const storedKids = localStorage.getItem(`pagepal-kids-${user.id}`);
     if (storedKids) setKids(JSON.parse(storedKids));
-    const storedForms = localStorage.getItem(`formbot-forms-${user.id}`);
+    const storedForms = localStorage.getItem(`pagepal-forms-${user.id}`);
     if (storedForms) setForms(JSON.parse(storedForms));
-    const storedEmails = localStorage.getItem(`formbot-emails-${user.id}`);
+    const storedEmails = localStorage.getItem(`pagepal-emails-${user.id}`);
     if (storedEmails) setEmails(JSON.parse(storedEmails));
   };
 
@@ -120,7 +119,7 @@ const AppContent: React.FC = () => {
     setEmails([]);
     setTasks([]);
     setActiveScreen(Screen.Home);
-    localStorage.removeItem('formbot-currentUser');
+    localStorage.removeItem('pagepal-currentUser');
   };
   
   const renderScreen = useCallback(() => {

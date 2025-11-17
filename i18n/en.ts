@@ -1,4 +1,3 @@
-
 export const en = {
   nav: {
     home: 'Home',
@@ -8,7 +7,7 @@ export const en = {
     settings: 'Settings',
   },
   auth: {
-    appName: 'FormBot',
+    appName: 'PagePal',
     appDesc: 'Your personal forms assistant.',
     login: 'Log In',
     signup: 'Sign Up',
@@ -115,6 +114,8 @@ export const en = {
     deleteModalTitle: 'Delete Email',
     deleteModalMessage: 'This will hide the email from your active list. Are you sure?',
     deleteButton: 'Delete',
+    originalContent: 'Original Content',
+    close: 'Close',
   },
   tasks: {
     title: 'Tasks & Deadlines',
