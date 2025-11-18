@@ -1,13 +1,13 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import type { Form, KidProfile, FormField, ProcessedEmail } from '../../types';
 import { processFormWithGemini, processEmailWithGemini } from '../../services/geminiService';
-import { PlusIcon, TrashIcon, ArrowUpTrayIcon, EnvelopeIcon } from '../Icons';
+import { PlusIcon, TrashIcon, ArrowUpTrayIcon, EnvelopeIcon, CameraIcon } from '../Icons';
 import ConfirmationModal from '../ConfirmationModal';
 import { useLanguage } from '../../contexts/LanguageContext';
 
-type FormScreenState = 'list' | 'upload' | 'processing' | 'review';
-type ReviewingForm = Partial<Omit<Form, 'summary'>> & { summary?: { en: string; es: string; }};
+type FormScreenState = 'list' | 'upload' | 'processing' | 'review' | 'details';
+type ReviewingForm = Partial<Omit<Form, 'summary'>> & { summary?: { en: string; es: string; } | string };
 
 const formCategories = ['School', 'Medical', 'Activities', 'Other'];
 
@@ -209,6 +209,52 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [viewingEmail, setViewingEmail] = useState<ProcessedEmail | null>(null);
 
+  // Camera logic
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isCameraActive, setIsCameraActive] = useState(false);
+
+  const startCamera = async () => {
+      setIsCameraActive(true);
+      // Small timeout to ensure video element is rendered
+      setTimeout(async () => {
+          try {
+              const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+              if (videoRef.current) {
+                  videoRef.current.srcObject = stream;
+                  videoRef.current.play();
+              }
+          } catch (err) {
+              console.error("Error accessing camera", err);
+              setError("Could not access camera. Please allow permissions.");
+              setIsCameraActive(false);
+          }
+      }, 100);
+  }
+
+  const stopCamera = () => {
+      if (videoRef.current && videoRef.current.srcObject) {
+          const stream = videoRef.current.srcObject as MediaStream;
+          stream.getTracks().forEach(track => track.stop());
+          videoRef.current.srcObject = null;
+      }
+      setIsCameraActive(false);
+  }
+
+  const takePhoto = () => {
+      if (videoRef.current) {
+          const canvas = document.createElement('canvas');
+          canvas.width = videoRef.current.videoWidth;
+          canvas.height = videoRef.current.videoHeight;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+              ctx.drawImage(videoRef.current, 0, 0);
+              const dataUrl = canvas.toDataURL('image/jpeg');
+              setImagePreview(dataUrl);
+              stopCamera();
+          }
+      }
+  }
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -216,7 +262,6 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
       };
-      // Corrected typo from `readDataURL` to `readAsDataURL`
       reader.readAsDataURL(file);
     }
   };
@@ -262,7 +307,8 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
     if (!currentForm.id) return;
     
     const kidName = kids.find(k => k.id === currentForm.kidId)?.name || 'Unknown Kid';
-    const summaryText = currentForm.summary?.[reviewLanguage] || '';
+    const summaryObj = currentForm.summary as { en: string; es: string };
+    const summaryText = summaryObj?.[reviewLanguage] || '';
     const summaryPart = summaryText.split('.')[0] || summaryText.substring(0, 50).trim();
     const formName = summaryPart ? `${kidName} - ${summaryPart}` : `Form for ${kidName}`;
 
@@ -275,7 +321,7 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
       filledFields: currentForm.filledFields!,
       createdAt: currentForm.createdAt!,
       category: currentForm.category!,
-      summary: currentForm.summary![reviewLanguage],
+      summary: summaryObj![reviewLanguage],
       status: 'pending',
       updatedAt: currentForm.updatedAt!,
     };
@@ -357,6 +403,7 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
     setImagePreview('');
     setDueDate('');
     setCategory(formCategories[0]);
+    if (isCameraActive) stopCamera();
   };
   
   const handleFieldChange = (index: number, value: string) => {
@@ -376,6 +423,8 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
   };
 
   const openDeleteModal = (id: string, type: 'form' | 'email') => {
+      const e = window.event;
+      e?.stopPropagation();
     if (type === 'form') {
         setModalState({
             isOpen: true,
@@ -391,6 +440,11 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
             action: () => handleDeleteEmail(id)
         });
     }
+  };
+
+  const handleViewDetails = (form: Form) => {
+      setCurrentForm(form);
+      setScreenState('details');
   };
   
   const activeForms = useMemo(() => forms.filter(form => form.status === 'pending'), [forms]);
@@ -413,9 +467,10 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
         case 'upload':
             return (
                 <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-                    <div className="bg-brand-surface rounded-lg p-8 w-full max-w-lg">
+                    <div className="bg-brand-surface rounded-lg p-8 w-full max-w-lg max-h-[90vh] overflow-y-auto">
                         <h2 className="text-2xl font-bold mb-6">{t('forms.scanNewForm')}</h2>
                         {error && <p className="bg-red-900 border border-red-700 text-red-200 p-3 rounded-md mb-4">{error}</p>}
+                        
                         <div className="space-y-4">
                            <select value={selectedKidId} onChange={(e) => setSelectedKidId(e.target.value)} className="w-full bg-brand-dark border border-brand-border rounded-md px-3 py-2 text-brand-light focus:outline-none focus:ring-2 focus:ring-brand-primary">
                                <option value="">{t('forms.selectChild')}</option>
@@ -424,17 +479,57 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
                            <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full bg-brand-dark border border-brand-border rounded-md px-3 py-2 text-brand-light focus:outline-none focus:ring-2 focus:ring-brand-primary">
                                 {formCategories.map(cat => <option key={cat} value={cat}>{t(`categories.${cat}`)}</option>)}
                            </select>
-                           <input type="file" accept="image/*,application/pdf" onChange={handleFileChange} className="w-full text-sm text-brand-secondary file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-brand-primary file:text-white hover:file:bg-brand-primary-hover"/>
-                           {imagePreview && <img src={imagePreview} alt="Form preview" className="max-h-40 rounded-md border border-brand-border"/>}
-                           <div>
-                                <label className="block text-sm font-medium text-brand-secondary mb-1">{t('forms.dueDateOptional')}</label>
-                                <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="w-full bg-brand-dark border border-brand-border rounded-md px-3 py-2 text-brand-light focus:outline-none focus:ring-2 focus:ring-brand-primary"/>
-                           </div>
+                           
+                           {!isCameraActive && (
+                               <>
+                                   <div className="flex space-x-2">
+                                        <div className="relative flex-grow">
+                                            <input type="file" accept="image/*,application/pdf" onChange={handleFileChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                                            <div className="w-full bg-brand-dark border border-brand-border rounded-md px-3 py-2 text-brand-light text-center hover:border-brand-primary transition-colors cursor-pointer">
+                                                {t('forms.uploadFile')}
+                                            </div>
+                                        </div>
+                                        <button onClick={startCamera} className="px-4 py-2 bg-brand-dark border border-brand-border rounded-md text-brand-light hover:border-brand-primary transition-colors flex items-center gap-2">
+                                            <CameraIcon />
+                                        </button>
+                                   </div>
+                                   {imagePreview && (
+                                       <div className="relative">
+                                           <img src={imagePreview} alt="Form preview" className="max-h-40 w-full object-contain rounded-md border border-brand-border"/>
+                                            <button onClick={() => setImagePreview('')} className="absolute top-2 right-2 bg-black bg-opacity-50 p-1 rounded-full text-white hover:bg-red-500">
+                                                <TrashIcon />
+                                            </button>
+                                       </div>
+                                   )}
+                               </>
+                           )}
+
+                           {isCameraActive && (
+                               <div className="space-y-2">
+                                   <div className="bg-black rounded-md overflow-hidden flex items-center justify-center h-64 w-full">
+                                       <video ref={videoRef} autoPlay playsInline className="max-h-full max-w-full"></video>
+                                   </div>
+                                   <div className="flex justify-center space-x-4">
+                                       <button onClick={stopCamera} className="px-4 py-2 rounded-md text-brand-light bg-brand-border hover:bg-opacity-80 transition-colors">{t('forms.cancel')}</button>
+                                       <button onClick={takePhoto} className="px-4 py-2 rounded-md text-white bg-brand-primary hover:bg-brand-primary-hover transition-colors">{t('forms.takePhoto')}</button>
+                                   </div>
+                               </div>
+                           )}
+
+                           {!isCameraActive && (
+                               <div>
+                                    <label className="block text-sm font-medium text-brand-secondary mb-1">{t('forms.dueDateOptional')}</label>
+                                    <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="w-full bg-brand-dark border border-brand-border rounded-md px-3 py-2 text-brand-light focus:outline-none focus:ring-2 focus:ring-brand-primary"/>
+                               </div>
+                           )}
                         </div>
-                        <div className="flex justify-end space-x-4 pt-6">
-                            <button onClick={resetState} className="px-4 py-2 rounded-md text-brand-light bg-brand-border hover:bg-opacity-80 transition-colors">{t('forms.cancel')}</button>
-                            <button onClick={handleScan} disabled={!selectedKidId || !imagePreview} className="px-4 py-2 rounded-md text-white bg-brand-primary hover:bg-brand-primary-hover transition-colors disabled:bg-brand-border disabled:cursor-not-allowed">{t('forms.scanForm')}</button>
-                        </div>
+
+                        {!isCameraActive && (
+                            <div className="flex justify-end space-x-4 pt-6">
+                                <button onClick={resetState} className="px-4 py-2 rounded-md text-brand-light bg-brand-border hover:bg-opacity-80 transition-colors">{t('forms.cancel')}</button>
+                                <button onClick={handleScan} disabled={!selectedKidId || !imagePreview} className="px-4 py-2 rounded-md text-white bg-brand-primary hover:bg-brand-primary-hover transition-colors disabled:bg-brand-border disabled:cursor-not-allowed">{t('forms.scanForm')}</button>
+                            </div>
+                        )}
                     </div>
                 </div>
             );
@@ -460,7 +555,7 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
                                <button onClick={() => setReviewLanguage('es')} className={`px-2 py-0.5 text-xs rounded ${reviewLanguage === 'es' ? 'bg-brand-primary text-white' : 'bg-brand-dark text-brand-secondary'}`}>ES</button>
                            </div>
                         </div>
-                        <p className="text-brand-light">{currentForm.summary ? currentForm.summary[reviewLanguage] : t('forms.loadingSummary')}</p>
+                        <p className="text-brand-light">{typeof currentForm.summary === 'object' ? currentForm.summary[reviewLanguage] : currentForm.summary || t('forms.loadingSummary')}</p>
                     </div>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                        <img src={currentForm.imageDataUrl} alt="Scanned Form" className="rounded-lg border border-brand-border max-h-[70vh] object-contain"/>
@@ -484,6 +579,43 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
                             <ArrowUpTrayIcon /> <span>{t('forms.exportPdf')}</span>
                         </button>
                         <button onClick={handleSaveForm} className="px-6 py-2 rounded-md text-white bg-brand-primary hover:bg-brand-primary-hover transition-colors">{t('forms.saveForm')}</button>
+                    </div>
+                </div>
+            );
+        case 'details':
+            return (
+                <div className="space-y-6">
+                    <div className="flex justify-between items-center">
+                         <h2 className="text-2xl font-bold">{t('forms.formDetails')}</h2>
+                         <button onClick={resetState} className="text-brand-primary hover:underline">{t('forms.back')}</button>
+                    </div>
+                    
+                    <div className="bg-brand-surface p-4 rounded-lg border border-brand-border">
+                        <div className="flex justify-between items-center mb-2">
+                           <p className="text-sm font-semibold text-brand-primary">{t('forms.aiSummary')}</p>
+                        </div>
+                        <p className="text-brand-light">{typeof currentForm.summary === 'string' ? currentForm.summary : 'No summary available.'}</p>
+                    </div>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                       <img src={currentForm.imageDataUrl} alt="Scanned Form" className="rounded-lg border border-brand-border max-h-[70vh] object-contain"/>
+                       <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+                           {currentForm.filledFields?.map((field, index) => (
+                               <div key={index}>
+                                   <label className="block text-sm font-medium text-brand-secondary mb-1">{field.label}</label>
+                                   <input readOnly type="text" value={field.value} className="w-full bg-brand-dark border border-brand-border rounded-md px-3 py-2 text-brand-secondary focus:outline-none cursor-not-allowed"/>
+                               </div>
+                           ))}
+                            {currentForm.filledFields?.length === 0 && (
+                                 <div className="text-center py-8 px-4 bg-brand-dark rounded-lg border border-brand-border">
+                                    <p className="text-brand-secondary">{t('forms.noFields')}</p>
+                                </div>
+                            )}
+                       </div>
+                    </div>
+                    <div className="flex justify-end space-x-4">
+                        <button onClick={handleExportPdf} className="flex items-center gap-2 px-4 py-2 rounded-md text-white bg-brand-primary hover:bg-brand-primary-hover transition-colors">
+                            <ArrowUpTrayIcon /> <span>{t('forms.exportPdf')}</span>
+                        </button>
                     </div>
                 </div>
             );
@@ -525,7 +657,7 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
                                            <h2 className="text-lg font-semibold text-brand-primary mb-3">{t(`categories.${category}`)}</h2>
                                            <div className="space-y-4">
                                            {groupedActiveForms[category].map(form => (
-                                                <div key={form.id} className="bg-brand-surface p-4 rounded-lg border border-brand-border flex items-center justify-between">
+                                                <div key={form.id} onClick={() => handleViewDetails(form)} className="bg-brand-surface p-4 rounded-lg border border-brand-border flex items-center justify-between hover:border-brand-primary cursor-pointer transition-colors">
                                                     <div className="flex items-center gap-4 flex-grow min-w-0">
                                                         <img src={form.imageDataUrl} alt="Form thumbnail" className="w-16 h-16 object-cover rounded-md flex-shrink-0"/>
                                                         <div className="flex-grow min-w-0">
@@ -534,7 +666,7 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
                                                             <p className="text-sm text-brand-secondary mt-2">{t('forms.due')}: {form.dueDate ? new Date(form.dueDate).toLocaleDateString() : 'N/A'}</p>
                                                         </div>
                                                     </div>
-                                                    <button className="p-2 text-brand-secondary hover:text-red-500 flex-shrink-0 ml-4" onClick={() => openDeleteModal(form.id, 'form')}><TrashIcon /></button>
+                                                    <button className="p-2 text-brand-secondary hover:text-red-500 flex-shrink-0 ml-4" onClick={(e) => openDeleteModal(form.id, 'form')}><TrashIcon /></button>
                                                 </div>
                                             ))}
                                             </div>
@@ -592,7 +724,7 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
                                     const statusColor = form.status === 'completed' ? 'text-green-400' : 'text-red-400';
                                     const statusBg = form.status === 'completed' ? 'bg-green-500/10' : 'bg-red-500/10';
                                     return (
-                                        <div key={form.id} className="bg-brand-surface p-4 rounded-lg border border-brand-border opacity-80">
+                                        <div key={form.id} onClick={() => handleViewDetails(form)} className="bg-brand-surface p-4 rounded-lg border border-brand-border opacity-80 hover:opacity-100 cursor-pointer hover:border-brand-primary transition-all">
                                             <div className="flex items-center justify-between">
                                                 <div className="flex-grow min-w-0">
                                                     <p className="font-semibold text-brand-light truncate" title={form.formName}>{form.formName}</p>

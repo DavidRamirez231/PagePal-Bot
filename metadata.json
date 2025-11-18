@@ -1,5 +1,7 @@
 {
   "name": "PagePal",
   "description": "A smart assistant for parents to scan, auto-fill, and manage school forms. It uses kid profiles to fill repetitive info, sets reminders for due dates, and keeps everything neatly organized.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [
+    "camera"
+  ]
 }

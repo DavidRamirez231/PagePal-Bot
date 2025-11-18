@@ -1,3 +1,4 @@
+
 export const en = {
   nav: {
     home: 'Home',
@@ -95,6 +96,12 @@ export const en = {
     statusCompleted: 'Completed',
     statusDeleted: 'Deleted',
     for: 'For',
+    useCamera: 'Use Camera',
+    takePhoto: 'Take Photo',
+    retake: 'Retake',
+    closeCamera: 'Close Camera',
+    formDetails: 'Form Details',
+    back: 'Back',
   },
   emails: {
     title: 'Email Archive',
