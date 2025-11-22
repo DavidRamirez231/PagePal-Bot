@@ -95,6 +95,7 @@ export const en = {
     due: 'Due',
     statusCompleted: 'Completed',
     statusDeleted: 'Deleted',
+    statusPending: 'Pending',
     for: 'For',
     useCamera: 'Use Camera',
     takePhoto: 'Take Photo',
@@ -102,6 +103,11 @@ export const en = {
     closeCamera: 'Close Camera',
     formDetails: 'Form Details',
     back: 'Back',
+    searchPlaceholder: 'Search forms, emails, kids, dates...',
+    bulkDelete: 'Delete Selected ({count})',
+    bulkDeleteTitle: 'Delete Multiple Items',
+    bulkDeleteMessage: 'Are you sure you want to delete the selected items? They will be moved to the history/deleted status.',
+    selectAll: 'Select All',
   },
   emails: {
     title: 'Email Archive',
@@ -141,6 +147,16 @@ export const en = {
     noUpcoming: 'Nothing on the horizon. Great job!',
     wasDue: 'Was due on',
     for: 'For',
+    calendar: 'Calendar',
+    weekdays: {
+      sun: 'Sun',
+      mon: 'Mon',
+      tue: 'Tue',
+      wed: 'Wed',
+      thu: 'Thu',
+      fri: 'Fri',
+      sat: 'Sat',
+    }
   },
   settings: {
     title: 'Settings',

@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
 import type { Task, Form, KidProfile, ProcessedEmail } from '../../types';
-import { CheckCircleIcon, TrashIcon, EnvelopeIcon } from '../Icons';
+import { CheckCircleIcon, TrashIcon, ChevronLeftIcon, ChevronRightIcon } from '../Icons';
 import ConfirmationModal from '../ConfirmationModal';
 import { useLanguage } from '../../contexts/LanguageContext';
 
@@ -16,6 +15,7 @@ interface TasksScreenProps {
 
 const TasksScreen: React.FC<TasksScreenProps> = ({ tasks, forms, kids, setForms, emails, setEmails }) => {
   const { t } = useLanguage();
+  const [currentDate, setCurrentDate] = useState(new Date());
   const [modalState, setModalState] = useState<{
     isOpen: boolean;
     title: string;
@@ -24,19 +24,6 @@ const TasksScreen: React.FC<TasksScreenProps> = ({ tasks, forms, kids, setForms,
     confirmText?: string;
     confirmColor?: string;
   }>({ isOpen: false, title: '', message: '', action: null });
-
-  const getTaskDetails = (task: Task) => {
-    if (task.id.startsWith('form-')) {
-        const form = forms.find(f => f.id === task.formId);
-        const kid = kids.find(k => k.id === form?.kidId);
-        return { source: form, kid, type: 'form' as const };
-    } else if (task.id.startsWith('email-')) {
-        const email = emails.find(e => e.id === task.formId);
-        const kid = kids.find(k => k.id === email?.kidId);
-        return { source: email, kid, type: 'email' as const };
-    }
-    return { source: null, kid: null, type: null };
-  };
 
   const handleCompleteTask = (taskId: string) => {
     if (taskId.startsWith('form-')) {
@@ -68,118 +55,150 @@ const TasksScreen: React.FC<TasksScreenProps> = ({ tasks, forms, kids, setForms,
     setModalState({ isOpen: false, title: '', message: '', action: null });
   };
 
-  const openCompleteModal = (taskId: string) => {
-    setModalState({
+  const openTaskActionModal = (task: Task) => {
+      setModalState({
         isOpen: true,
-        title: t('tasks.completeModalTitle'),
-        message: t('tasks.completeModalMessage'),
-        action: () => handleCompleteTask(taskId),
+        title: task.title,
+        message: t('tasks.completeModalMessage'), // Reusing existing message logic, or can simplify
+        action: () => handleCompleteTask(task.id),
         confirmText: t('tasks.completeButton'),
         confirmColor: 'bg-brand-primary hover:bg-brand-primary-hover'
-    });
+      });
   };
   
-  const openDeleteModal = (taskId: string) => {
-    setModalState({
-        isOpen: true,
-        title: t('tasks.deleteModalTitle'),
-        message: t('tasks.deleteModalMessage'),
-        action: () => handleDeleteTask(taskId),
-        confirmText: t('tasks.deleteButton'),
-        confirmColor: 'bg-red-600 hover:bg-red-700'
-    });
+  // Calendar Logic
+  const daysInMonth = (date: Date) => new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  const firstDayOfMonth = (date: Date) => new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+
+  const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+  const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+
+  const getCategoryColor = (task: Task) => {
+      // Check for past due
+      const isPastDue = new Date(task.dueDate) < new Date();
+      if (isPastDue) {
+          return 'bg-red-600/20 text-red-300 border-red-600/50 hover:bg-red-600/30';
+      }
+
+      if (task.id.startsWith('email-')) return 'bg-purple-500/20 text-purple-300 border-purple-500/50 hover:bg-purple-500/30';
+      
+      const form = forms.find(f => f.id === task.formId);
+      const category = form?.category || 'Other';
+      
+      switch(category) {
+          case 'School': return 'bg-blue-500/20 text-blue-300 border-blue-500/50 hover:bg-blue-500/30';
+          case 'Medical': return 'bg-red-500/20 text-red-300 border-red-500/50 hover:bg-red-500/30';
+          case 'Activities': return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 hover:bg-emerald-500/30';
+          default: return 'bg-gray-500/20 text-gray-300 border-gray-500/50 hover:bg-gray-500/30';
+      }
   };
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const renderHeader = () => (
+      <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold capitalize">
+              {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
+          </h2>
+          <div className="flex space-x-2">
+              <button onClick={prevMonth} className="p-2 rounded-full hover:bg-brand-surface transition-colors">
+                  <ChevronLeftIcon />
+              </button>
+              <button onClick={nextMonth} className="p-2 rounded-full hover:bg-brand-surface transition-colors">
+                  <ChevronRightIcon />
+              </button>
+          </div>
+      </div>
+  );
 
-  const upcomingTasks = tasks.filter(t => new Date(t.dueDate) >= today);
-  const pastDueTasks = tasks.filter(t => new Date(t.dueDate) < today);
-
-  const TaskItem: React.FC<{ task: Task, isPastDue?: boolean }> = ({ task, isPastDue = false }) => {
-    const { source, kid, type } = getTaskDetails(task);
-    if (!source || !kid) return null;
-
-    const dueDate = new Date(task.dueDate);
-    const diffTime = dueDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    let urgencyColor = 'text-green-400';
-    if (diffDays <= 7) urgencyColor = 'text-yellow-400';
-    if (diffDays <= 2) urgencyColor = 'text-red-400';
-    if (isPastDue) urgencyColor = 'text-red-400';
-    
-    const summaryText = type === 'form' ? (source as Form).summary : (source as ProcessedEmail).summary;
-
-    return (
-        <div className={`bg-brand-surface p-4 rounded-lg border ${isPastDue ? 'border-red-800 opacity-90' : 'border-brand-border'}`}>
-            <div className="flex items-start justify-between">
-                <div className="flex items-center gap-4 min-w-0">
-                  {type === 'form' ? (
-                    <img src={(source as Form).imageDataUrl} alt="Form thumbnail" className="w-12 h-12 object-cover rounded-md flex-shrink-0"/>
-                  ) : (
-                    <div className="w-12 h-12 bg-brand-dark rounded-md flex-shrink-0 flex items-center justify-center">
-                        <div className="w-6 h-6 text-brand-secondary"><EnvelopeIcon /></div>
-                    </div>
-                  )}
-                  <div className="min-w-0">
-                    <p className="font-semibold text-brand-light truncate">{task.title}</p>
-                    <p className="text-sm text-brand-secondary">{t('tasks.for')} {kid?.name || 'Unknown'}</p>
+  const renderDays = () => {
+      const days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+      return (
+          <div className="grid grid-cols-7 mb-2">
+              {days.map(day => (
+                  <div key={day} className="text-center text-sm font-medium text-brand-secondary uppercase py-2">
+                      {t(`tasks.weekdays.${day}`)}
                   </div>
-                </div>
-                <div className="text-right flex-shrink-0 ml-4">
-                    <p className={`font-semibold ${urgencyColor}`}>{dueDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
-                    {isPastDue ? (
-                        <p className={`text-sm ${urgencyColor}`}>{t('tasks.wasDue')}</p>
-                    ) : (
-                        <p className={`text-sm ${urgencyColor}`}>
-                            {diffDays === 0 ? t('tasks.today') : diffDays === 1 ? t('tasks.tomorrow') : t('tasks.inDays', { days: diffDays.toString() })}
-                        </p>
-                    )}
-                </div>
-            </div>
-            <div className="flex justify-end items-center gap-2 border-t border-brand-border/80 mt-3 pt-3">
-                <button onClick={() => openCompleteModal(task.id)} className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md text-green-400 hover:bg-green-500/10 transition-colors">
-                    <div className="w-5 h-5"><CheckCircleIcon /></div>
-                    <span>{t('tasks.completeButton')}</span>
-                </button>
-                <button onClick={() => openDeleteModal(task.id)} className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md text-red-500 hover:bg-red-500/10 transition-colors">
-                    <div className="w-5 h-5"><TrashIcon /></div>
-                    <span>{t('tasks.deleteButton')}</span>
-                </button>
-            </div>
-        </div>
-    );
+              ))}
+          </div>
+      );
   };
 
+  const renderCells = () => {
+      const totalDays = daysInMonth(currentDate);
+      const startDay = firstDayOfMonth(currentDate);
+      const daysArray = [];
+
+      // Padding for previous month
+      for (let i = 0; i < startDay; i++) {
+          daysArray.push(<div key={`empty-${i}`} className="h-32 bg-brand-dark/50 border border-brand-border/30"></div>);
+      }
+
+      // Actual days
+      for (let day = 1; day <= totalDays; day++) {
+          const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          
+          const daysTasks = tasks.filter(task => {
+             const taskDate = new Date(task.dueDate);
+             return taskDate.getDate() === day && 
+                    taskDate.getMonth() === currentDate.getMonth() && 
+                    taskDate.getFullYear() === currentDate.getFullYear();
+          });
+
+          daysArray.push(
+              <div key={day} className="min-h-[8rem] bg-brand-surface border border-brand-border p-2 overflow-hidden transition-colors hover:border-brand-primary/50 relative group">
+                  <span className={`inline-block w-7 h-7 text-center leading-7 rounded-full text-sm font-medium mb-1 ${
+                      new Date().getDate() === day && new Date().getMonth() === currentDate.getMonth() && new Date().getFullYear() === currentDate.getFullYear() 
+                      ? 'bg-brand-primary text-brand-dark' 
+                      : 'text-brand-light'
+                  }`}>
+                      {day}
+                  </span>
+                  <div className="space-y-1.5 overflow-y-auto max-h-[6rem] scrollbar-hide">
+                      {daysTasks.map(task => {
+                          const kid = kids.find(k => {
+                              if (task.id.startsWith('form-')) return forms.find(f => f.id === task.formId)?.kidId === k.id;
+                              if (task.id.startsWith('email-')) return emails.find(e => e.id === task.formId)?.kidId === k.id;
+                              return false;
+                          });
+                          const dateObj = new Date(task.dueDate);
+                          const hasTime = task.dueDate.includes('T');
+                          const timeStr = hasTime 
+                              ? dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                              : 'All Day';
+
+                          return (
+                              <button 
+                                  key={task.id} 
+                                  onClick={() => openTaskActionModal(task)}
+                                  className={`w-full text-left px-2 py-1 rounded text-xs border truncate block ${getCategoryColor(task)}`}
+                                  title={`${task.title} - ${kid?.name}`}
+                              >
+                                  <div className="flex justify-between items-center text-[10px] opacity-80 mb-0.5">
+                                      <span>{kid?.name.split(' ')[0]}</span>
+                                      <span>{timeStr}</span>
+                                  </div>
+                                  <div className="font-medium truncate">{task.title}</div>
+                              </button>
+                          );
+                      })}
+                  </div>
+              </div>
+          );
+      }
+
+      return <div className="grid grid-cols-7 gap-1">{daysArray}</div>;
+  };
 
   return (
-    <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">{t('tasks.title')}</h1>
+    <div className="animate-fade-in">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold">{t('tasks.calendar')}</h1>
         <p className="text-brand-secondary mt-1">{t('tasks.subtitle')}</p>
       </div>
 
-      <div className="space-y-8">
-        <div>
-          <h2 className="text-xl font-semibold text-brand-primary mb-4 pb-2 border-b-2 border-brand-border">{t('tasks.upcoming')}</h2>
-          {upcomingTasks.length > 0 ? (
-            <div className="space-y-4">
-              {upcomingTasks.map(task => <TaskItem key={task.id} task={task} />)}
-            </div>
-          ) : (
-            <p className="text-brand-secondary">{t('tasks.noUpcoming')}</p>
-          )}
-        </div>
-
-        {pastDueTasks.length > 0 && (
-          <div>
-            <h2 className="text-xl font-semibold text-red-500 mb-4 pb-2 border-b-2 border-brand-border">{t('tasks.pastDue')}</h2>
-            <div className="space-y-4">
-              {pastDueTasks.map(task => <TaskItem key={task.id} task={task} isPastDue />)}
-            </div>
-          </div>
-        )}
+      <div className="bg-brand-dark rounded-lg">
+          {renderHeader()}
+          {renderDays()}
+          {renderCells()}
       </div>
 
        {modalState.isOpen && (

@@ -32,17 +32,29 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setActiveScreen, tasks, current
         <h2 className="text-lg font-semibold text-brand-light mb-4">{t('home.upcomingDeadlines')}</h2>
         {upcomingTasks.length > 0 ? (
           <div className="space-y-3">
-            {upcomingTasks.map(task => (
-              <div key={task.id} className="bg-brand-surface p-4 rounded-lg border border-brand-border flex justify-between items-center">
-                <div>
-                  <p className="font-medium text-brand-light">{task.title}</p>
-                  <p className="text-sm text-brand-primary">{new Date(task.dueDate).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+            {upcomingTasks.map(task => {
+              const isPastDue = new Date(task.dueDate) < new Date();
+              const containerClass = isPastDue 
+                ? "bg-brand-surface p-4 rounded-lg border border-red-500 flex justify-between items-center"
+                : "bg-brand-surface p-4 rounded-lg border border-brand-border flex justify-between items-center";
+              const dateClass = isPastDue ? "text-sm text-red-500 font-bold" : "text-sm text-brand-primary";
+              const statusText = isPastDue ? ` (${t('tasks.pastDue')})` : "";
+
+              return (
+                <div key={task.id} className={containerClass}>
+                  <div>
+                    <p className="font-medium text-brand-light">{task.title}</p>
+                    <p className={dateClass}>
+                        {new Date(task.dueDate).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                        {statusText}
+                    </p>
+                  </div>
+                  <button onClick={() => setActiveScreen(Screen.Tasks)} className="text-sm text-brand-primary hover:underline">
+                    {t('home.view')}
+                  </button>
                 </div>
-                <button onClick={() => setActiveScreen(Screen.Tasks)} className="text-sm text-brand-primary hover:underline">
-                  {t('home.view')}
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="text-center py-8 px-4 bg-brand-surface rounded-lg border border-brand-border">

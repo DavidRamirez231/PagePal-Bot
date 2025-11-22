@@ -95,6 +95,7 @@ export const es = {
     due: 'Vence',
     statusCompleted: 'Completado',
     statusDeleted: 'Eliminado',
+    statusPending: 'Pendiente',
     for: 'Para',
     useCamera: 'Usar Cámara',
     takePhoto: 'Tomar Foto',
@@ -102,6 +103,11 @@ export const es = {
     closeCamera: 'Cerrar Cámara',
     formDetails: 'Detalles del Formulario',
     back: 'Atrás',
+    searchPlaceholder: 'Buscar formularios, correos, niños, fechas...',
+    bulkDelete: 'Eliminar Seleccionados ({count})',
+    bulkDeleteTitle: 'Eliminar Múltiples Elementos',
+    bulkDeleteMessage: '¿Estás seguro de que deseas eliminar los elementos seleccionados? Se moverán al historial/estado eliminado.',
+    selectAll: 'Seleccionar Todo',
   },
   emails: {
     title: 'Archivo de Correos',
@@ -141,6 +147,16 @@ export const es = {
     noUpcoming: 'Nada en el horizonte. ¡Buen trabajo!',
     wasDue: 'Venció el',
     for: 'Para',
+    calendar: 'Calendario',
+    weekdays: {
+      sun: 'Dom',
+      mon: 'Lun',
+      tue: 'Mar',
+      wed: 'Mié',
+      thu: 'Jue',
+      fri: 'Vie',
+      sat: 'Sáb',
+    }
   },
   settings: {
     title: 'Ajustes',

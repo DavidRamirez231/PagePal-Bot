@@ -99,6 +99,46 @@ const AppContent: React.FC = () => {
     setTasks(allTasks);
   }, [forms, emails, isLoggedIn, currentUser]);
 
+  // Notification Logic
+  useEffect(() => {
+    if (!isLoggedIn || tasks.length === 0 || !("Notification" in window)) return;
+
+    const checkNotifications = () => {
+      const hasNotifiedSession = sessionStorage.getItem('pagepal-notified-session');
+      if (hasNotifiedSession) return;
+
+      const now = new Date();
+      const in24Hours = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+
+      const upcomingTasks = tasks.filter(t => {
+        const d = new Date(t.dueDate);
+        return d > now && d < in24Hours;
+      });
+
+      if (upcomingTasks.length > 0) {
+        if (Notification.permission === "granted") {
+          new Notification("PagePal Reminder", {
+            body: `You have ${upcomingTasks.length} task${upcomingTasks.length > 1 ? 's' : ''} due within the next 24 hours.`,
+            icon: '/vite.svg'
+          });
+          sessionStorage.setItem('pagepal-notified-session', 'true');
+        } else if (Notification.permission !== "denied") {
+          Notification.requestPermission().then(permission => {
+            if (permission === "granted") {
+              new Notification("PagePal Reminder", {
+                body: `You have ${upcomingTasks.length} task${upcomingTasks.length > 1 ? 's' : ''} due within the next 24 hours.`,
+                icon: '/vite.svg'
+              });
+              sessionStorage.setItem('pagepal-notified-session', 'true');
+            }
+          });
+        }
+      }
+    };
+
+    checkNotifications();
+  }, [tasks, isLoggedIn]);
+
   const handleLogin = (user: User) => {
     setCurrentUser(user);
     setIsLoggedIn(true);
@@ -120,6 +160,7 @@ const AppContent: React.FC = () => {
     setTasks([]);
     setActiveScreen(Screen.Home);
     localStorage.removeItem('pagepal-currentUser');
+    sessionStorage.removeItem('pagepal-notified-session');
   };
   
   const renderScreen = useCallback(() => {

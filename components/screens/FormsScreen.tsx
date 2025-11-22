@@ -1,8 +1,8 @@
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import type { Form, KidProfile, FormField, ProcessedEmail } from '../../types';
 import { processFormWithGemini, processEmailWithGemini } from '../../services/geminiService';
-import { PlusIcon, TrashIcon, ArrowUpTrayIcon, EnvelopeIcon, CameraIcon } from '../Icons';
+import { PlusIcon, TrashIcon, ArrowUpTrayIcon, EnvelopeIcon, CameraIcon, MagnifyingGlassIcon } from '../Icons';
 import ConfirmationModal from '../ConfirmationModal';
 import { useLanguage } from '../../contexts/LanguageContext';
 
@@ -140,7 +140,7 @@ const EmailProcessingModal: React.FC<{
                            </div>
                            <div>
                                 <label className="block text-sm font-medium text-brand-secondary mb-1">{t('emails.dueDate')}</label>
-                                <input type="date" value={processedData.dueDate || ''} onChange={e => setProcessedData({...processedData, dueDate: e.target.value})} className="w-full bg-brand-dark border border-brand-border rounded-md px-3 py-2 text-brand-light focus:outline-none focus:ring-2 focus:ring-brand-primary"/>
+                                <input type="datetime-local" value={processedData.dueDate || ''} onChange={e => setProcessedData({...processedData, dueDate: e.target.value})} className="w-full bg-brand-dark border border-brand-border rounded-md px-3 py-2 text-brand-light focus:outline-none focus:ring-2 focus:ring-brand-primary"/>
                            </div>
                         </div>
                         <div className="flex justify-end space-x-4 pt-6">
@@ -169,7 +169,7 @@ const EmailDetailModal: React.FC<{
                     {t('forms.for')} {kidName}
                     {email.dueDate && (
                         <span className="ml-2 pl-2 border-l border-brand-border text-brand-primary font-medium">
-                            {t('forms.due')}: {new Date(email.dueDate).toLocaleDateString()}
+                            {t('forms.due')}: {new Date(email.dueDate).toLocaleString()}
                         </span>
                     )}
                 </p>
@@ -208,14 +208,19 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
   const [view, setView] = useState<'active' | 'history' | 'emails'>('active');
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [viewingEmail, setViewingEmail] = useState<ProcessedEmail | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Camera logic
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isCameraActive, setIsCameraActive] = useState(false);
 
+  useEffect(() => {
+      setSelectedIds(new Set());
+  }, [view]);
+
   const startCamera = async () => {
       setIsCameraActive(true);
-      // Small timeout to ensure video element is rendered
       setTimeout(async () => {
           try {
               const stream = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -446,10 +451,52 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
       setCurrentForm(form);
       setScreenState('details');
   };
+
+  const filterForm = (form: Form, query: string) => {
+      if (!query) return true;
+      const lowerQuery = query.toLowerCase();
+      const kid = kids.find(k => k.id === form.kidId);
+      const kidName = kid ? kid.name.toLowerCase() : '';
+      const summaryObj = typeof form.summary === 'object' ? form.summary : { en: form.summary, es: form.summary };
+      const summaryEn = (summaryObj?.en || '').toLowerCase();
+      const summaryEs = (summaryObj?.es || '').toLowerCase();
+      const formName = form.formName.toLowerCase();
+      const category = (form.category || '').toLowerCase();
+      const date = form.dueDate ? new Date(form.dueDate).toLocaleDateString().toLowerCase() : '';
+
+      return formName.includes(lowerQuery) ||
+             kidName.includes(lowerQuery) ||
+             summaryEn.includes(lowerQuery) ||
+             summaryEs.includes(lowerQuery) ||
+             category.includes(lowerQuery) ||
+             date.includes(lowerQuery);
+  };
+
+  const filterEmail = (email: ProcessedEmail, query: string) => {
+      if (!query) return true;
+      const lowerQuery = query.toLowerCase();
+      const kid = kids.find(k => k.id === email.kidId);
+      const kidName = kid ? kid.name.toLowerCase() : '';
+      const label = email.label.toLowerCase();
+      const summary = email.summary.toLowerCase();
+      const date = email.dueDate ? new Date(email.dueDate).toLocaleDateString().toLowerCase() : '';
+
+      return label.includes(lowerQuery) ||
+             kidName.includes(lowerQuery) ||
+             summary.includes(lowerQuery) ||
+             date.includes(lowerQuery);
+  };
+
   
-  const activeForms = useMemo(() => forms.filter(form => form.status === 'pending'), [forms]);
-  const historyForms = useMemo(() => forms.filter(form => form.status === 'completed' || form.status === 'deleted').sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()), [forms]);
-  const activeEmails = useMemo(() => emails.filter(email => email.status === 'active').sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()), [emails]);
+  const activeForms = useMemo(() => forms.filter(form => form.status === 'pending' && filterForm(form, searchQuery)), [forms, searchQuery, kids]);
+  
+  const historyForms = useMemo(() => forms.filter(form => (form.status === 'completed' || form.status === 'deleted') && filterForm(form, searchQuery))
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()), 
+  [forms, searchQuery, kids]);
+  
+  const activeEmails = useMemo(() => emails.filter(email => email.status === 'active' && filterEmail(email, searchQuery))
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()), 
+  [emails, searchQuery, kids]);
 
   const groupedActiveForms = useMemo(() => {
     return activeForms.reduce((acc, form) => {
@@ -461,6 +508,46 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
         return acc;
     }, {} as Record<string, Form[]>);
   }, [activeForms]);
+
+  const toggleSelection = (id: string) => {
+      const newSet = new Set(selectedIds);
+      if (newSet.has(id)) {
+          newSet.delete(id);
+      } else {
+          newSet.add(id);
+      }
+      setSelectedIds(newSet);
+  };
+
+  const toggleSelectAll = (ids: string[]) => {
+      if (ids.every(id => selectedIds.has(id))) {
+          const newSet = new Set(selectedIds);
+          ids.forEach(id => newSet.delete(id));
+          setSelectedIds(newSet);
+      } else {
+          const newSet = new Set(selectedIds);
+          ids.forEach(id => newSet.add(id));
+          setSelectedIds(newSet);
+      }
+  };
+
+  const handleBulkDelete = () => {
+      setModalState({
+          isOpen: true,
+          title: t('forms.bulkDeleteTitle'),
+          message: t('forms.bulkDeleteMessage'),
+          action: () => {
+              const ids = Array.from(selectedIds);
+              if (view === 'active') {
+                  setForms(prev => prev.map(f => ids.includes(f.id) ? { ...f, status: 'deleted', updatedAt: new Date().toISOString() } : f));
+              } else if (view === 'emails') {
+                  setEmails(prev => prev.map(e => ids.includes(e.id) ? { ...e, status: 'deleted', updatedAt: new Date().toISOString() } : e));
+              }
+              setSelectedIds(new Set());
+              setModalState({ isOpen: false, title: '', message: '', action: null });
+          }
+      });
+  };
 
   const renderContent = () => {
     switch(screenState) {
@@ -519,7 +606,7 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
                            {!isCameraActive && (
                                <div>
                                     <label className="block text-sm font-medium text-brand-secondary mb-1">{t('forms.dueDateOptional')}</label>
-                                    <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="w-full bg-brand-dark border border-brand-border rounded-md px-3 py-2 text-brand-light focus:outline-none focus:ring-2 focus:ring-brand-primary"/>
+                                    <input type="datetime-local" value={dueDate} onChange={e => setDueDate(e.target.value)} className="w-full bg-brand-dark border border-brand-border rounded-md px-3 py-2 text-brand-light focus:outline-none focus:ring-2 focus:ring-brand-primary"/>
                                </div>
                            )}
                         </div>
@@ -621,6 +708,11 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
             );
         case 'list':
         default:
+            const currentItems = view === 'active' ? activeForms : view === 'emails' ? activeEmails : [];
+            const currentIds = currentItems.map(i => i.id);
+            const isAllSelected = currentIds.length > 0 && currentIds.every(id => selectedIds.has(id));
+            const showBulkActions = (view === 'active' && activeForms.length > 0) || (view === 'emails' && activeEmails.length > 0);
+
             return (
                 <>
                     <div className="flex justify-between items-center mb-4">
@@ -635,6 +727,19 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
                             </button>
                         )}
                     </div>
+
+                    <div className="mb-6 relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-brand-secondary">
+                            <MagnifyingGlassIcon />
+                        </div>
+                        <input 
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder={t('forms.searchPlaceholder')}
+                            className="w-full bg-brand-surface border border-brand-border rounded-md pl-10 pr-4 py-2 text-brand-light focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                        />
+                    </div>
                     
                     <div className="flex border-b border-brand-border mb-6">
                         <button onClick={() => setView('active')} className={`px-4 py-2 text-sm font-medium transition-colors ${view === 'active' ? 'border-b-2 border-brand-primary text-brand-primary' : 'text-brand-secondary hover:text-brand-light'}`}>
@@ -647,6 +752,29 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
                             {t('forms.historyTab')} ({historyForms.length})
                         </button>
                     </div>
+                    
+                    {showBulkActions && (
+                        <div className="flex items-center justify-between bg-brand-surface px-4 py-2 rounded-md border border-brand-border mb-4">
+                            <div className="flex items-center">
+                                <input 
+                                    type="checkbox" 
+                                    checked={isAllSelected} 
+                                    onChange={() => toggleSelectAll(currentIds)}
+                                    className="w-4 h-4 rounded border-brand-border text-brand-primary focus:ring-brand-primary bg-brand-dark"
+                                />
+                                <span className="ml-2 text-sm text-brand-secondary">{t('forms.selectAll')}</span>
+                            </div>
+                            {selectedIds.size > 0 && (
+                                <button 
+                                    onClick={handleBulkDelete} 
+                                    className="text-sm text-red-400 hover:text-red-300 flex items-center gap-1"
+                                >
+                                    <TrashIcon />
+                                    {t('forms.bulkDelete', {count: selectedIds.size.toString()})}
+                                </button>
+                            )}
+                        </div>
+                    )}
 
                     {view === 'active' && (
                         <>
@@ -659,9 +787,22 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
                                            {groupedActiveForms[category].map(form => (
                                                 <div key={form.id} onClick={() => handleViewDetails(form)} className="bg-brand-surface p-4 rounded-lg border border-brand-border flex items-center justify-between hover:border-brand-primary cursor-pointer transition-colors">
                                                     <div className="flex items-center gap-4 flex-grow min-w-0">
+                                                        <div onClick={(e) => e.stopPropagation()}>
+                                                            <input 
+                                                                type="checkbox" 
+                                                                checked={selectedIds.has(form.id)}
+                                                                onChange={() => toggleSelection(form.id)}
+                                                                className="w-4 h-4 rounded border-brand-border text-brand-primary focus:ring-brand-primary bg-brand-dark"
+                                                            />
+                                                        </div>
                                                         <img src={form.imageDataUrl} alt="Form thumbnail" className="w-16 h-16 object-cover rounded-md flex-shrink-0"/>
                                                         <div className="flex-grow min-w-0">
-                                                            <p className="font-semibold text-brand-light truncate" title={form.formName}>{form.formName}</p>
+                                                            <div className="flex items-center gap-2">
+                                                                <p className="font-semibold text-brand-light truncate" title={form.formName}>{form.formName}</p>
+                                                                <span className="inline-flex items-center rounded-md bg-yellow-400/10 px-2 py-1 text-xs font-medium text-yellow-400 ring-1 ring-inset ring-yellow-400/20">
+                                                                    {t('forms.statusPending')}
+                                                                </span>
+                                                            </div>
                                                             <p className="text-sm text-brand-secondary mt-1 italic truncate">"{form.summary}"</p>
                                                             <p className="text-sm text-brand-secondary mt-2">{t('forms.due')}: {form.dueDate ? new Date(form.dueDate).toLocaleDateString() : 'N/A'}</p>
                                                         </div>
@@ -690,16 +831,26 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
                                         const kidName = kids.find(k => k.id === email.kidId)?.name || 'Unknown';
                                         return (
                                             <div key={email.id} className="bg-brand-surface rounded-lg border border-brand-border flex items-center justify-between transition-colors hover:border-brand-primary">
-                                                <button onClick={() => setViewingEmail(email)} className="p-4 flex items-center gap-4 flex-grow min-w-0 text-left">
-                                                    <div className="w-16 h-16 bg-brand-dark rounded-md flex-shrink-0 flex items-center justify-center">
-                                                        <div className="w-8 h-8 text-brand-secondary"><EnvelopeIcon /></div>
+                                                <div className="flex items-center flex-grow min-w-0">
+                                                    <div className="pl-4" onClick={(e) => e.stopPropagation()}>
+                                                        <input 
+                                                            type="checkbox" 
+                                                            checked={selectedIds.has(email.id)}
+                                                            onChange={() => toggleSelection(email.id)}
+                                                            className="w-4 h-4 rounded border-brand-border text-brand-primary focus:ring-brand-primary bg-brand-dark"
+                                                        />
                                                     </div>
-                                                    <div className="flex-grow min-w-0">
-                                                        <p className="font-semibold text-brand-light truncate" title={email.label}>{email.label}</p>
-                                                        <p className="text-sm text-brand-secondary mt-1 italic truncate">"{email.summary}"</p>
-                                                        <p className="text-sm text-brand-secondary mt-2">{t('forms.for')} {kidName} {email.dueDate ? `· ${t('forms.due')}: ${new Date(email.dueDate).toLocaleDateString()}` : ''}</p>
-                                                    </div>
-                                                </button>
+                                                    <button onClick={() => setViewingEmail(email)} className="p-4 flex items-center gap-4 flex-grow min-w-0 text-left">
+                                                        <div className="w-16 h-16 bg-brand-dark rounded-md flex-shrink-0 flex items-center justify-center">
+                                                            <div className="w-8 h-8 text-brand-secondary"><EnvelopeIcon /></div>
+                                                        </div>
+                                                        <div className="flex-grow min-w-0">
+                                                            <p className="font-semibold text-brand-light truncate" title={email.label}>{email.label}</p>
+                                                            <p className="text-sm text-brand-secondary mt-1 italic truncate">"{email.summary}"</p>
+                                                            <p className="text-sm text-brand-secondary mt-2">{t('forms.for')} {kidName} {email.dueDate ? `· ${t('forms.due')}: ${new Date(email.dueDate).toLocaleDateString()}` : ''}</p>
+                                                        </div>
+                                                    </button>
+                                                </div>
                                                 <button className="p-2 text-brand-secondary hover:text-red-500 flex-shrink-0 mx-4" onClick={() => openDeleteModal(email.id, 'email')}><TrashIcon /></button>
                                             </div>
                                         )
