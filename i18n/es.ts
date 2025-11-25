@@ -108,6 +108,8 @@ export const es = {
     bulkDeleteTitle: 'Eliminar Múltiples Elementos',
     bulkDeleteMessage: '¿Estás seguro de que deseas eliminar los elementos seleccionados? Se moverán al historial/estado eliminado.',
     selectAll: 'Seleccionar Todo',
+    select: 'Seleccionar',
+    deselect: 'Deseleccionar',
   },
   emails: {
     title: 'Archivo de Correos',

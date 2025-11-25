@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import type { Form, KidProfile, ProcessedEmail } from '../../types';
 import { processFormWithGemini, processEmailWithGemini } from '../../services/geminiService';
-import { PlusIcon, TrashIcon, ArrowUpTrayIcon, EnvelopeIcon, CameraIcon, MagnifyingGlassIcon, ChevronLeftIcon } from '../Icons';
+import { PlusIcon, TrashIcon, ArrowUpTrayIcon, EnvelopeIcon, CameraIcon, MagnifyingGlassIcon, ChevronLeftIcon, CheckCircleIcon } from '../Icons';
 import ConfirmationModal from '../ConfirmationModal';
 import { useLanguage } from '../../contexts/LanguageContext';
 import CameraOverlay from '../CameraOverlay';
@@ -166,6 +166,12 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
       const ids = Array.from(selectedIds);
       if (view === 'active') {
           setForms(prev => prev.map(f => ids.includes(f.id) ? { ...f, status: 'deleted', updatedAt: new Date().toISOString() } : f));
+      } else if (view === 'history') {
+         // In history, delete might mean permanent delete or just keep as deleted. 
+         // Assuming we just update timestamp or keep as is. 
+         // For now, let's allow 'hard' delete from history or just ensure they stay 'deleted'.
+         // Let's toggle them to 'deleted' if they were 'completed'.
+         setForms(prev => prev.map(f => ids.includes(f.id) ? { ...f, status: 'deleted', updatedAt: new Date().toISOString() } : f));
       } else {
           setEmails(prev => prev.map(e => ids.includes(e.id) ? { ...e, status: 'deleted', updatedAt: new Date().toISOString() } : e));
       }
@@ -272,6 +278,58 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
   const inputStyle = "w-full bg-[#2C2C2E] border-none text-white rounded-xl p-4 placeholder-gray-500 focus:ring-2 focus:ring-brand-primary/50 transition-all outline-none";
   const labelStyle = "block text-sm font-medium text-brand-secondary mb-2 ml-1";
 
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+        case 'pending':
+            return <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md bg-yellow-500/20 text-yellow-400 border border-yellow-500/20">{t('forms.statusPending')}</span>;
+        case 'completed':
+            return <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md bg-green-500/20 text-green-400 border border-green-500/20">{t('forms.statusCompleted')}</span>;
+        case 'deleted':
+            return <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md bg-red-500/20 text-red-400 border border-red-500/20">{t('forms.statusDeleted')}</span>;
+        default:
+            return null;
+    }
+  };
+
+  const filteredForms = forms.filter(f => {
+      // 1. Filter by view
+      if (view === 'active' && f.status !== 'pending') return false;
+      if (view === 'history' && f.status === 'pending') return false;
+
+      // 2. Filter by search query
+      if (searchQuery) {
+          const q = searchQuery.toLowerCase();
+          const kid = kids.find(k => k.id === f.kidId);
+          return (
+              f.formName.toLowerCase().includes(q) ||
+              f.summary.toLowerCase().includes(q) ||
+              f.category.toLowerCase().includes(q) ||
+              kid?.name.toLowerCase().includes(q) ||
+              (f.dueDate && f.dueDate.includes(q))
+          );
+      }
+      return true;
+  });
+
+  const filteredEmails = emails.filter(e => {
+      // 1. Filter by view
+      if (view !== 'emails') return false;
+      if (e.status !== 'active') return false;
+
+      // 2. Filter by search
+      if (searchQuery) {
+          const q = searchQuery.toLowerCase();
+          const kid = kids.find(k => k.id === e.kidId);
+          return (
+              e.label.toLowerCase().includes(q) ||
+              e.summary.toLowerCase().includes(q) ||
+              kid?.name.toLowerCase().includes(q) ||
+              (e.dueDate && e.dueDate.includes(q))
+          );
+      }
+      return true;
+  });
+
   return (
     <div className="h-full flex flex-col">
         {/* Header & Search */}
@@ -325,27 +383,47 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
 
         {/* Content Lists */}
         <div className="flex-1 space-y-3 pb-20">
-            {view === 'active' && forms.filter(f => f.status === 'pending').map(form => (
+            {/* Active Forms List */}
+            {view === 'active' && filteredForms.map(form => (
                  <div key={form.id} onClick={() => { setSelectedItem({ type: 'form', data: form }); setScreenState('details'); }} className="glass-panel p-4 rounded-2xl active:scale-[0.98] transition-all cursor-pointer flex gap-4 items-center group">
-                    <div onClick={(e) => { e.stopPropagation(); toggleSelection(form.id); }} className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${selectedIds.has(form.id) ? 'bg-brand-primary border-brand-primary' : 'border-gray-600'}`}>
-                        {selectedIds.has(form.id) && <div className="w-2.5 h-2.5 bg-white rounded-full" />}
-                    </div>
-                    <img src={form.imageDataUrl} className="w-16 h-16 rounded-xl object-cover bg-black" />
-                    <div className="flex-1 min-w-0">
-                        <div className="flex justify-between">
-                            <h3 className="font-semibold text-white truncate">{form.formName}</h3>
-                            <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-md">Pending</span>
+                    <div className="relative group/select z-20">
+                        <div onClick={(e) => { e.stopPropagation(); toggleSelection(form.id); }} className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${selectedIds.has(form.id) ? 'bg-brand-primary border-brand-primary' : 'border-gray-600'}`}>
+                            {selectedIds.has(form.id) && <div className="w-2.5 h-2.5 bg-white rounded-full" />}
                         </div>
-                        <p className="text-sm text-gray-400 truncate mt-1">{form.summary}</p>
+                         {/* Tooltip */}
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-[#2C2C2E] border border-white/10 rounded-lg shadow-xl opacity-0 translate-y-1 group-hover/select:opacity-100 group-hover/select:translate-y-0 transition-all duration-200 pointer-events-none whitespace-nowrap z-50 backdrop-blur-md">
+                            <span className="text-xs font-bold text-white">{selectedIds.has(form.id) ? t('forms.deselect') : t('forms.select')}</span>
+                             {/* Triangle */}
+                             <div className="absolute top-full left-1/2 -translate-x-1/2 border-l-[6px] border-r-[6px] border-t-[6px] border-l-transparent border-r-transparent border-t-[#2C2C2E]"></div>
+                        </div>
+                    </div>
+                    
+                    <img src={form.imageDataUrl} className="w-16 h-16 rounded-xl object-cover bg-black border border-white/5" />
+                    <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-start mb-1">
+                            <h3 className="font-semibold text-white truncate pr-2">{form.formName}</h3>
+                            {getStatusBadge(form.status)}
+                        </div>
+                        <p className="text-sm text-gray-400 truncate">{form.summary}</p>
                     </div>
                  </div>
             ))}
-             {view === 'emails' && emails.filter(e => e.status === 'active').map(email => (
-                 <div key={email.id} onClick={() => { setSelectedItem({ type: 'email', data: email }); setScreenState('details'); }} className="glass-panel p-4 rounded-2xl active:scale-[0.98] transition-all cursor-pointer flex gap-4 items-center">
-                    <div onClick={(e) => { e.stopPropagation(); toggleSelection(email.id); }} className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${selectedIds.has(email.id) ? 'bg-brand-primary border-brand-primary' : 'border-gray-600'}`}>
-                        {selectedIds.has(email.id) && <div className="w-2.5 h-2.5 bg-white rounded-full" />}
+
+            {/* Emails List */}
+            {view === 'emails' && filteredEmails.map(email => (
+                 <div key={email.id} onClick={() => { setSelectedItem({ type: 'email', data: email }); setScreenState('details'); }} className="glass-panel p-4 rounded-2xl active:scale-[0.98] transition-all cursor-pointer flex gap-4 items-center group">
+                    <div className="relative group/select z-20">
+                        <div onClick={(e) => { e.stopPropagation(); toggleSelection(email.id); }} className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${selectedIds.has(email.id) ? 'bg-brand-primary border-brand-primary' : 'border-gray-600'}`}>
+                            {selectedIds.has(email.id) && <div className="w-2.5 h-2.5 bg-white rounded-full" />}
+                        </div>
+                         {/* Tooltip */}
+                         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-[#2C2C2E] border border-white/10 rounded-lg shadow-xl opacity-0 translate-y-1 group-hover/select:opacity-100 group-hover/select:translate-y-0 transition-all duration-200 pointer-events-none whitespace-nowrap z-50 backdrop-blur-md">
+                            <span className="text-xs font-bold text-white">{selectedIds.has(email.id) ? t('forms.deselect') : t('forms.select')}</span>
+                             {/* Triangle */}
+                             <div className="absolute top-full left-1/2 -translate-x-1/2 border-l-[6px] border-r-[6px] border-t-[6px] border-l-transparent border-r-transparent border-t-[#2C2C2E]"></div>
+                        </div>
                     </div>
-                    <div className="w-16 h-16 rounded-xl bg-brand-primary/20 flex items-center justify-center text-brand-primary">
+                    <div className="w-16 h-16 rounded-xl bg-brand-primary/20 flex items-center justify-center text-brand-primary flex-shrink-0">
                         <EnvelopeIcon />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -354,11 +432,50 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
                     </div>
                  </div>
             ))}
+
+            {/* History List */}
+            {view === 'history' && filteredForms.map(form => (
+                 <div key={form.id} onClick={() => { setSelectedItem({ type: 'form', data: form }); setScreenState('details'); }} className="glass-panel p-4 rounded-2xl active:scale-[0.98] transition-all cursor-pointer flex gap-4 items-center group opacity-80 hover:opacity-100">
+                    <div className="relative group/select z-20">
+                        <div onClick={(e) => { e.stopPropagation(); toggleSelection(form.id); }} className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${selectedIds.has(form.id) ? 'bg-brand-primary border-brand-primary' : 'border-gray-600'}`}>
+                            {selectedIds.has(form.id) && <div className="w-2.5 h-2.5 bg-white rounded-full" />}
+                        </div>
+                         {/* Tooltip */}
+                         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-[#2C2C2E] border border-white/10 rounded-lg shadow-xl opacity-0 translate-y-1 group-hover/select:opacity-100 group-hover/select:translate-y-0 transition-all duration-200 pointer-events-none whitespace-nowrap z-50 backdrop-blur-md">
+                            <span className="text-xs font-bold text-white">{selectedIds.has(form.id) ? t('forms.deselect') : t('forms.select')}</span>
+                             {/* Triangle */}
+                             <div className="absolute top-full left-1/2 -translate-x-1/2 border-l-[6px] border-r-[6px] border-t-[6px] border-l-transparent border-r-transparent border-t-[#2C2C2E]"></div>
+                        </div>
+                    </div>
+                    
+                    <img src={form.imageDataUrl} className="w-16 h-16 rounded-xl object-cover bg-black grayscale" />
+                    <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-start mb-1">
+                            <h3 className="font-semibold text-white truncate pr-2">{form.formName}</h3>
+                            {getStatusBadge(form.status)}
+                        </div>
+                        <p className="text-sm text-gray-400 truncate">{form.summary}</p>
+                    </div>
+                 </div>
+            ))}
+
             {/* Empty States */}
-            {view === 'active' && forms.filter(f => f.status === 'pending').length === 0 && (
+            {view === 'active' && filteredForms.length === 0 && (
                 <div className="text-center py-12 opacity-50">
                     <p className="text-lg font-medium">{t('forms.noActiveForms')}</p>
                     <p className="text-sm">{t('forms.noActiveFormsDesc')}</p>
+                </div>
+            )}
+             {view === 'history' && filteredForms.length === 0 && (
+                <div className="text-center py-12 opacity-50">
+                    <p className="text-lg font-medium">{t('forms.noHistory')}</p>
+                    <p className="text-sm">{t('forms.noHistoryDesc')}</p>
+                </div>
+            )}
+            {view === 'emails' && filteredEmails.length === 0 && (
+                <div className="text-center py-12 opacity-50">
+                    <p className="text-lg font-medium">{t('emails.noEmails')}</p>
+                    <p className="text-sm">{t('emails.noEmailsDesc')}</p>
                 </div>
             )}
         </div>

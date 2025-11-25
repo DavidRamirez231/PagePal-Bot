@@ -30,14 +30,24 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setActiveScreen, tasks, current
             <h1 className="text-4xl font-bold text-white tracking-tight">{getGreeting()}</h1>
             <p className="text-brand-secondary text-lg mt-1 font-medium">{currentUser?.name || t('home.defaultParentName')}</p>
         </div>
-        <div className="w-14 h-14 rounded-full border-2 border-brand-surface-highlight bg-brand-surface-highlight overflow-hidden shadow-lg cursor-pointer" onClick={() => setActiveScreen(Screen.Settings)}>
-            {currentUser?.photoUrl ? (
-                <img src={currentUser.photoUrl} alt="Profile" className="w-full h-full object-cover" />
-            ) : (
-                <div className="w-full h-full flex items-center justify-center text-xl font-bold text-brand-secondary bg-brand-surface">
-                    {currentUser?.name.charAt(0).toUpperCase()}
-                </div>
-            )}
+        
+        {/* Profile Circle with Hover Tooltip */}
+        <div className="group relative cursor-pointer" onClick={() => setActiveScreen(Screen.Settings)}>
+            <div className="w-14 h-14 rounded-full border-2 border-brand-surface-highlight bg-brand-surface-highlight overflow-hidden shadow-lg transition-transform group-hover:scale-105 group-active:scale-95">
+                {currentUser?.photoUrl ? (
+                    <img src={currentUser.photoUrl} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center text-xl font-bold text-brand-secondary bg-brand-surface">
+                        {currentUser?.name.charAt(0).toUpperCase()}
+                    </div>
+                )}
+            </div>
+            {/* Tooltip */}
+            <div className="absolute top-full right-0 mt-2 px-3 py-1.5 bg-[#2C2C2E] border border-white/10 rounded-lg shadow-xl opacity-0 translate-y-[-5px] group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 pointer-events-none whitespace-nowrap z-50 backdrop-blur-md">
+                <span className="text-xs font-bold text-white">{t('nav.settings')}</span>
+                {/* Little triangle pointer */}
+                <div className="absolute bottom-full right-4 border-l-[6px] border-r-[6px] border-b-[6px] border-l-transparent border-r-transparent border-b-[#2C2C2E]"></div>
+            </div>
         </div>
       </div>
 

@@ -108,6 +108,8 @@ export const en = {
     bulkDeleteTitle: 'Delete Multiple Items',
     bulkDeleteMessage: 'Are you sure you want to delete the selected items? They will be moved to the history/deleted status.',
     selectAll: 'Select All',
+    select: 'Select',
+    deselect: 'Deselect',
   },
   emails: {
     title: 'Email Archive',
