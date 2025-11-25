@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import type { Form, KidProfile, ProcessedEmail } from '../../types';
 import { processFormWithGemini, processEmailWithGemini } from '../../services/geminiService';
-import { PlusIcon, TrashIcon, ArrowUpTrayIcon, EnvelopeIcon, CameraIcon, MagnifyingGlassIcon, ChevronLeftIcon, CheckCircleIcon } from '../Icons';
+import { PlusIcon, TrashIcon, ArrowUpTrayIcon, EnvelopeIcon, CameraIcon, MagnifyingGlassIcon, ChevronLeftIcon, CheckCircleIcon, SpinnerIcon } from '../Icons';
 import ConfirmationModal from '../ConfirmationModal';
 import { useLanguage } from '../../contexts/LanguageContext';
 import CameraOverlay from '../CameraOverlay';
@@ -63,6 +63,11 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
   const [view, setView] = useState<'active' | 'history' | 'emails'>('active');
   const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
   
+  // Loading States
+  const [isSaving, setIsSaving] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState<string>('');
+  
   // Email Processing State
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [emailContent, setEmailContent] = useState('');
@@ -73,6 +78,20 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
   const [selectedItem, setSelectedItem] = useState<{ type: 'form' | 'email', data: any } | null>(null);
 
   useEffect(() => setSelectedIds(new Set()), [view]);
+
+  // Cycle loading messages for AI processing
+  useEffect(() => {
+    if (screenState === 'processing') {
+      const messages = ['Uploading form...', 'Analyzing text...', 'Extracting dates...', 'Translating summary...'];
+      let i = 0;
+      setLoadingMessage(messages[0]);
+      const interval = setInterval(() => {
+        i = (i + 1) % messages.length;
+        setLoadingMessage(messages[i]);
+      }, 1200);
+      return () => clearInterval(interval);
+    }
+  }, [screenState]);
 
   /* --- Handlers --- */
   const handleScan = async () => {
@@ -118,8 +137,12 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
     }
   };
 
-  const handleSaveForm = () => {
+  const handleSaveForm = async () => {
       if (!currentForm.id) return;
+      setIsSaving(true);
+      // Simulate network delay for UX
+      await new Promise(resolve => setTimeout(resolve, 800));
+
       const kidName = kids.find(k => k.id === currentForm.kidId)?.name || 'Unknown';
       const summaryObj = currentForm.summary as { en: string; es: string };
       const actionItemsObj = currentForm.actionItems as { en: string[]; es: string[] };
@@ -141,6 +164,7 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
           updatedAt: currentForm.updatedAt!
       };
       setForms(prev => [newForm, ...prev]);
+      setIsSaving(false);
       resetState();
   };
 
@@ -167,10 +191,6 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
       if (view === 'active') {
           setForms(prev => prev.map(f => ids.includes(f.id) ? { ...f, status: 'deleted', updatedAt: new Date().toISOString() } : f));
       } else if (view === 'history') {
-         // In history, delete might mean permanent delete or just keep as deleted. 
-         // Assuming we just update timestamp or keep as is. 
-         // For now, let's allow 'hard' delete from history or just ensure they stay 'deleted'.
-         // Let's toggle them to 'deleted' if they were 'completed'.
          setForms(prev => prev.map(f => ids.includes(f.id) ? { ...f, status: 'deleted', updatedAt: new Date().toISOString() } : f));
       } else {
           setEmails(prev => prev.map(e => ids.includes(e.id) ? { ...e, status: 'deleted', updatedAt: new Date().toISOString() } : e));
@@ -208,9 +228,13 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
       }
   };
 
-  const saveEmail = () => {
+  const saveEmail = async () => {
       if (processedEmailData) {
+          setIsSaving(true);
+          await new Promise(resolve => setTimeout(resolve, 600));
+
           setEmails(prev => [processedEmailData, ...prev]);
+          setIsSaving(false);
           setIsEmailModalOpen(false);
           setEmailStep('input');
           setProcessedEmailData(null);
@@ -220,6 +244,9 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
 
   const handleExportPDF = async () => {
     if (!selectedItem || selectedItem.type !== 'form') return;
+    setIsExporting(true);
+    // Simulate generation delay
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     // Lazy load jsPDF to ensure window.jspdf is available
     const { jsPDF } = window.jspdf;
@@ -272,6 +299,7 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
     }
 
     doc.save(`${form.formName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
+    setIsExporting(false);
   };
 
   /* --- Render Helpers --- */
@@ -573,9 +601,12 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
         {/* 3. Processing State */}
         {screenState === 'processing' && (
             <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center">
-                <div className="w-16 h-16 border-4 border-brand-primary border-t-transparent rounded-full animate-spin mb-6" />
-                <h2 className="text-2xl font-bold text-white mb-2">{t('forms.analyzing')}</h2>
-                <p className="text-gray-400">{t('forms.aiAssist')}</p>
+                <div className="relative w-24 h-24 mb-6">
+                    <div className="absolute inset-0 border-4 border-brand-primary/20 rounded-full" />
+                    <div className="absolute inset-0 border-4 border-brand-primary border-t-transparent rounded-full animate-spin" />
+                </div>
+                <h2 className="text-2xl font-bold text-white mb-2 animate-pulse">{t('forms.analyzing')}</h2>
+                <p className="text-gray-400 font-medium transition-all duration-300 min-h-[1.5rem]">{loadingMessage || t('forms.aiAssist')}</p>
             </div>
         )}
 
@@ -588,9 +619,13 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
                     </button>
                     <h2 className="font-bold text-white">{screenState === 'review' ? t('forms.reviewEdit') : t('forms.formDetails')}</h2>
                     {screenState === 'review' ? (
-                        <button onClick={handleSaveForm} className="font-bold text-brand-primary">{t('forms.saveForm')}</button>
+                        <button onClick={handleSaveForm} disabled={isSaving} className="font-bold text-brand-primary flex items-center disabled:opacity-50">
+                            {isSaving && <SpinnerIcon />} {t('forms.saveForm')}
+                        </button>
                     ) : (
-                         <button onClick={handleExportPDF} className="font-bold text-brand-primary text-sm">{t('forms.exportPdf')}</button>
+                         <button onClick={handleExportPDF} disabled={isExporting} className="font-bold text-brand-primary text-sm flex items-center disabled:opacity-50">
+                             {isExporting && <SpinnerIcon />} {t('forms.exportPdf')}
+                         </button>
                     )}
                 </div>
 
@@ -712,7 +747,9 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
                 <div className="space-y-4">
                     <input value={processedEmailData.label} onChange={e => setProcessedEmailData({...processedEmailData, label: e.target.value})} className={inputStyle} />
                     <textarea value={processedEmailData.summary} onChange={e => setProcessedEmailData({...processedEmailData, summary: e.target.value})} className={`${inputStyle} h-32`} />
-                    <button onClick={saveEmail} className="w-full bg-brand-primary text-white py-4 rounded-2xl font-bold">{t('emails.saveEmail')}</button>
+                    <button onClick={saveEmail} disabled={isSaving} className="w-full bg-brand-primary text-white py-4 rounded-2xl font-bold flex items-center justify-center disabled:opacity-70">
+                        {isSaving ? <><SpinnerIcon /> {t('forms.saving')}...</> : t('emails.saveEmail')}
+                    </button>
                 </div>
             )}
         </ModalSheet>

@@ -54,11 +54,25 @@ export interface ProcessedEmail {
   updatedAt: string;
 }
 
+export interface ManualTask {
+  id: string;
+  title: string;
+  dueDate: string;
+  description: string;
+  color?: string;
+  priority?: 'low' | 'normal' | 'important' | 'urgent' | 'critical';
+  createdAt: string;
+}
+
 export interface Task {
   id: string;
   title: string;
   dueDate: string;
-  formId: string;
+  sourceType: 'form' | 'email' | 'manual';
+  sourceId: string;
+  description?: string;
+  color?: string;
+  priority?: string;
 }
 
 export enum Screen {

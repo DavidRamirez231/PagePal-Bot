@@ -8,7 +8,7 @@ import FormsScreen from './components/screens/FormsScreen';
 import TasksScreen from './components/screens/TasksScreen';
 import SettingsScreen from './components/screens/SettingsScreen';
 import AuthScreen from './components/screens/AuthScreen';
-import type { KidProfile, Form, Task, User, ProcessedEmail } from './types';
+import type { KidProfile, Form, Task, User, ProcessedEmail, ManualTask } from './types';
 import { Screen } from './types';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 
@@ -18,6 +18,7 @@ const AppContent: React.FC = () => {
   const [kids, setKids] = useState<KidProfile[]>([]);
   const [forms, setForms] = useState<Form[]>([]);
   const [emails, setEmails] = useState<ProcessedEmail[]>([]);
+  const [manualTasks, setManualTasks] = useState<ManualTask[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -56,6 +57,9 @@ const AppContent: React.FC = () => {
 
         const storedEmails = localStorage.getItem(`pagepal-emails-${user.id}`);
         if (storedEmails) setEmails(JSON.parse(storedEmails));
+
+        const storedManualTasks = localStorage.getItem(`pagepal-manual-tasks-${user.id}`);
+        if (storedManualTasks) setManualTasks(JSON.parse(storedManualTasks));
       }
     } catch (error) {
       console.error("Failed to parse data from localStorage", error);
@@ -78,29 +82,51 @@ const AppContent: React.FC = () => {
     if (isLoggedIn && currentUser) {
         localStorage.setItem(`pagepal-forms-${currentUser.id}`, JSON.stringify(forms));
     }
-    const formTasks = forms
+  }, [forms, isLoggedIn, currentUser]);
+
+  useEffect(() => {
+    if (isLoggedIn && currentUser) {
+        localStorage.setItem(`pagepal-manual-tasks-${currentUser.id}`, JSON.stringify(manualTasks));
+    }
+  }, [manualTasks, isLoggedIn, currentUser]);
+
+  useEffect(() => {
+    const formTasks: Task[] = forms
       .filter(form => form.dueDate && form.status === 'pending')
       .map(form => ({
         id: `form-${form.id}`,
         title: form.formName,
         dueDate: form.dueDate,
-        formId: form.id,
+        sourceType: 'form',
+        sourceId: form.id,
       }));
 
-    const emailTasks = emails
+    const emailTasks: Task[] = emails
       .filter(email => email.dueDate && email.status === 'active')
       .map(email => ({
           id: `email-${email.id}`,
           title: email.label,
           dueDate: email.dueDate!,
-          formId: email.id,
+          sourceType: 'email',
+          sourceId: email.id,
       }));
 
-    const allTasks = [...formTasks, ...emailTasks]
+    const manualTaskItems: Task[] = manualTasks.map(task => ({
+        id: `manual-${task.id}`,
+        title: task.title,
+        dueDate: task.dueDate,
+        sourceType: 'manual',
+        sourceId: task.id,
+        description: task.description,
+        color: task.color,
+        priority: task.priority
+    }));
+
+    const allTasks = [...formTasks, ...emailTasks, ...manualTaskItems]
         .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
 
     setTasks(allTasks);
-  }, [forms, emails, isLoggedIn, currentUser]);
+  }, [forms, emails, manualTasks, isLoggedIn, currentUser]);
 
   // Notification Logic
   useEffect(() => {
@@ -121,7 +147,7 @@ const AppContent: React.FC = () => {
       if (upcomingTasks.length > 0) {
         if (Notification.permission === "granted") {
           new Notification("PagePal Reminder", {
-            body: `You have ${upcomingTasks.length} task${upcomingTasks.length > 1 ? 's' : ''} due within the next 24 hours.`,
+            body: `You have ${upcomingTasks.length} event${upcomingTasks.length > 1 ? 's' : ''} coming up within 24 hours.`,
             icon: '/vite.svg'
           });
           sessionStorage.setItem('pagepal-notified-session', 'true');
@@ -129,7 +155,7 @@ const AppContent: React.FC = () => {
           Notification.requestPermission().then(permission => {
             if (permission === "granted") {
               new Notification("PagePal Reminder", {
-                body: `You have ${upcomingTasks.length} task${upcomingTasks.length > 1 ? 's' : ''} due within the next 24 hours.`,
+                body: `You have ${upcomingTasks.length} event${upcomingTasks.length > 1 ? 's' : ''} coming up within 24 hours.`,
                 icon: '/vite.svg'
               });
               sessionStorage.setItem('pagepal-notified-session', 'true');
@@ -152,6 +178,8 @@ const AppContent: React.FC = () => {
     if (storedForms) setForms(JSON.parse(storedForms));
     const storedEmails = localStorage.getItem(`pagepal-emails-${user.id}`);
     if (storedEmails) setEmails(JSON.parse(storedEmails));
+    const storedManualTasks = localStorage.getItem(`pagepal-manual-tasks-${user.id}`);
+    if (storedManualTasks) setManualTasks(JSON.parse(storedManualTasks));
   };
 
   const handleLogout = () => {
@@ -160,10 +188,19 @@ const AppContent: React.FC = () => {
     setKids([]);
     setForms([]);
     setEmails([]);
+    setManualTasks([]);
     setTasks([]);
     setActiveScreen(Screen.Home);
     localStorage.removeItem('pagepal-currentUser');
     sessionStorage.removeItem('pagepal-notified-session');
+  };
+
+  const addManualTask = (task: ManualTask) => {
+      setManualTasks(prev => [...prev, task]);
+  };
+
+  const deleteManualTask = (id: string) => {
+      setManualTasks(prev => prev.filter(t => t.id !== id));
   };
   
   const renderScreen = useCallback(() => {
@@ -173,14 +210,25 @@ const AppContent: React.FC = () => {
       case Screen.Forms:
         return <FormsScreen forms={forms} setForms={setForms} kids={kids} emails={emails} setEmails={setEmails} />;
       case Screen.Tasks:
-        return <TasksScreen tasks={tasks} forms={forms} kids={kids} setForms={setForms} emails={emails} setEmails={setEmails} />;
+        return (
+            <TasksScreen 
+                tasks={tasks} 
+                forms={forms} 
+                kids={kids} 
+                emails={emails} 
+                setForms={setForms} 
+                setEmails={setEmails}
+                onAddManualTask={addManualTask}
+                onDeleteManualTask={deleteManualTask}
+            />
+        );
       case Screen.Settings:
         return <SettingsScreen currentUser={currentUser} onLogout={handleLogout} />;
       case Screen.Home:
       default:
         return <HomeScreen setActiveScreen={setActiveScreen} tasks={tasks} currentUser={currentUser} />;
     }
-  }, [activeScreen, kids, forms, tasks, currentUser, emails]);
+  }, [activeScreen, kids, forms, tasks, currentUser, emails, manualTasks]);
 
   const navItems = [
     { id: Screen.Home, label: t('nav.home'), icon: <HomeIcon /> },
