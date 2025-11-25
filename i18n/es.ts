@@ -120,6 +120,7 @@ export const es = {
     reviewTitle: 'Revisar Resumen del Correo',
     aiLabel: 'Etiqueta Generada por IA',
     aiSummary: 'Resumen Generado por IA',
+    actionItems: 'Elementos de Acción',
     dueDate: 'Fecha de Entrega Extraída (Opcional)',
     saveEmail: 'Guardar Correo',
     noEmails: 'Aún no hay correos procesados',
@@ -168,6 +169,11 @@ export const es = {
     english: 'English',
     spanish: 'Español',
     logout: 'Cerrar Sesión',
+  },
+  imagePicker: {
+    takePhoto: 'Tomar Foto',
+    chooseLibrary: 'Elegir de la Galería',
+    cancel: 'Cancelar',
   },
   confirmModal: {
     confirm: 'Confirmar',

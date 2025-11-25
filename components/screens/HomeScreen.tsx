@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { DocumentTextIcon, UserGroupIcon, CalendarIcon } from '../Icons';
 import { Screen, type Task, type User } from '../../types';
@@ -22,66 +23,98 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setActiveScreen, tasks, current
   const upcomingTasks = tasks.slice(0, 3);
 
   return (
-    <div className="space-y-12 animate-fade-in">
-      <div>
-        <h1 className="text-3xl font-bold text-brand-light">{getGreeting()}, {currentUser?.name || t('home.defaultParentName')}.</h1>
-        <p className="text-brand-secondary mt-1">{t('home.subtitle')}</p>
+    <div className="space-y-8 max-w-lg mx-auto">
+      {/* Header Section */}
+      <div className="animate-in flex items-center justify-between" style={{ animationDelay: '0ms' }}>
+        <div>
+            <h1 className="text-4xl font-bold text-white tracking-tight">{getGreeting()}</h1>
+            <p className="text-brand-secondary text-lg mt-1 font-medium">{currentUser?.name || t('home.defaultParentName')}</p>
+        </div>
+        <div className="w-14 h-14 rounded-full border-2 border-brand-surface-highlight bg-brand-surface-highlight overflow-hidden shadow-lg cursor-pointer" onClick={() => setActiveScreen(Screen.Settings)}>
+            {currentUser?.photoUrl ? (
+                <img src={currentUser.photoUrl} alt="Profile" className="w-full h-full object-cover" />
+            ) : (
+                <div className="w-full h-full flex items-center justify-center text-xl font-bold text-brand-secondary bg-brand-surface">
+                    {currentUser?.name.charAt(0).toUpperCase()}
+                </div>
+            )}
+        </div>
       </div>
 
-      <div>
-        <h2 className="text-lg font-semibold text-brand-light mb-4">{t('home.upcomingDeadlines')}</h2>
+      {/* Deadlines Widget */}
+      <div className="animate-in" style={{ animationDelay: '100ms' }}>
+        <div className="flex justify-between items-end mb-4 px-1">
+            <h2 className="text-xl font-bold text-white tracking-wide">{t('home.upcomingDeadlines')}</h2>
+            <button onClick={() => setActiveScreen(Screen.Tasks)} className="text-sm font-medium text-brand-primary active:opacity-60 transition-opacity">
+                {t('home.view')}
+            </button>
+        </div>
+        
         {upcomingTasks.length > 0 ? (
           <div className="space-y-3">
-            {upcomingTasks.map(task => {
+            {upcomingTasks.map((task, idx) => {
               const isPastDue = new Date(task.dueDate) < new Date();
-              const containerClass = isPastDue 
-                ? "bg-brand-surface p-4 rounded-lg border border-red-500 flex justify-between items-center"
-                : "bg-brand-surface p-4 rounded-lg border border-brand-border flex justify-between items-center";
-              const dateClass = isPastDue ? "text-sm text-red-500 font-bold" : "text-sm text-brand-primary";
-              const statusText = isPastDue ? ` (${t('tasks.pastDue')})` : "";
-
               return (
-                <div key={task.id} className={containerClass}>
-                  <div>
-                    <p className="font-medium text-brand-light">{task.title}</p>
-                    <p className={dateClass}>
-                        {new Date(task.dueDate).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                        {statusText}
-                    </p>
+                <div 
+                    key={task.id} 
+                    onClick={() => setActiveScreen(Screen.Tasks)}
+                    className={`glass-panel p-4 rounded-2xl flex justify-between items-center active:scale-95 transition-transform duration-200 cursor-pointer ${isPastDue ? 'border-brand-danger/30 bg-brand-danger/5' : ''}`}
+                    style={{ animationDelay: `${150 + idx * 50}ms` }}
+                >
+                  <div className="flex items-center gap-4">
+                      <div className={`w-2 h-10 rounded-full ${isPastDue ? 'bg-brand-danger' : 'bg-brand-primary'}`}></div>
+                      <div>
+                        <p className="font-semibold text-white text-base">{task.title}</p>
+                        <p className={`text-sm ${isPastDue ? 'text-brand-danger font-medium' : 'text-brand-secondary'}`}>
+                            {new Date(task.dueDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                            {isPastDue && ` • ${t('tasks.pastDue')}`}
+                        </p>
+                      </div>
                   </div>
-                  <button onClick={() => setActiveScreen(Screen.Tasks)} className="text-sm text-brand-primary hover:underline">
-                    {t('home.view')}
-                  </button>
+                  <div className="text-brand-secondary/50">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                  </div>
                 </div>
               );
             })}
           </div>
         ) : (
-          <div className="text-center py-8 px-4 bg-brand-surface rounded-lg border border-brand-border">
-            <p className="text-brand-secondary">{t('home.noDeadlines')}</p>
+          <div className="glass-panel p-8 rounded-3xl text-center">
+            <div className="w-16 h-16 bg-brand-surface-highlight rounded-full flex items-center justify-center mx-auto mb-4 text-brand-primary">
+                <CalendarIcon />
+            </div>
+            <p className="text-brand-secondary font-medium">{t('home.noDeadlines')}</p>
           </div>
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <ActionButton
-          icon={<DocumentTextIcon />}
-          title={t('home.scanForm')}
-          description={t('home.scanFormDesc')}
-          onClick={() => setActiveScreen(Screen.Forms)}
-        />
-        <ActionButton
-          icon={<UserGroupIcon />}
-          title={t('home.kidProfiles')}
-          description={t('home.kidProfilesDesc')}
-          onClick={() => setActiveScreen(Screen.Kids)}
-        />
-        <ActionButton
-          icon={<CalendarIcon />}
-          title={t('home.tasksDeadlines')}
-          description={t('home.tasksDeadlinesDesc')}
-          onClick={() => setActiveScreen(Screen.Tasks)}
-        />
+      {/* Quick Actions Grid */}
+      <div>
+        <h2 className="text-xl font-bold text-white tracking-wide mb-4 px-1">{t('nav.home')}</h2>
+        <div className="grid grid-cols-2 gap-4 animate-in" style={{ animationDelay: '200ms' }}>
+            <ActionButton
+            icon={<DocumentTextIcon />}
+            title={t('home.scanForm')}
+            color="bg-brand-primary"
+            onClick={() => setActiveScreen(Screen.Forms)}
+            delay={0}
+            />
+            <ActionButton
+            icon={<UserGroupIcon />}
+            title={t('home.kidProfiles')}
+            color="bg-purple-500"
+            onClick={() => setActiveScreen(Screen.Kids)}
+            delay={100}
+            />
+            <ActionButton
+            icon={<CalendarIcon />}
+            title={t('home.tasksDeadlines')}
+            color="bg-orange-500"
+            onClick={() => setActiveScreen(Screen.Tasks)}
+            delay={200}
+            fullWidth
+            />
+        </div>
       </div>
     </div>
   );
@@ -90,18 +123,25 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setActiveScreen, tasks, current
 interface ActionButtonProps {
   icon: React.ReactNode;
   title: string;
-  description: string;
+  color: string;
   onClick: () => void;
+  fullWidth?: boolean;
+  delay: number;
 }
 
-const ActionButton: React.FC<ActionButtonProps> = ({ icon, title, description, onClick }) => (
+const ActionButton: React.FC<ActionButtonProps> = ({ icon, title, color, onClick, fullWidth, delay }) => (
   <button
     onClick={onClick}
-    className="bg-brand-surface p-6 rounded-lg border border-brand-border text-left hover:border-brand-primary transition-all duration-200 transform hover:-translate-y-1"
+    className={`glass-panel p-5 rounded-3xl text-left active:scale-95 transition-all duration-200 group relative overflow-hidden ${fullWidth ? 'col-span-2 flex items-center gap-4' : 'flex flex-col justify-between h-32'}`}
+    style={{ animationDelay: `${200 + delay}ms` }}
   >
-    <div className="w-10 h-10 text-brand-primary mb-4">{icon}</div>
-    <h3 className="text-xl font-semibold text-brand-light">{title}</h3>
-    <p className="text-brand-secondary mt-1">{description}</p>
+    {/* Gradient Background Glow */}
+    <div className={`absolute -right-4 -top-4 w-24 h-24 rounded-full opacity-20 blur-2xl ${color}`}></div>
+
+    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white shadow-lg ${color} ${fullWidth ? 'mb-0' : 'mb-3'}`}>
+        {icon}
+    </div>
+    <span className="text-lg font-bold text-white z-10">{title}</span>
   </button>
 );
 

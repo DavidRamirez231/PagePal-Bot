@@ -1,3 +1,4 @@
+
 import React from 'react';
 import type { Screen } from '../types';
 
@@ -15,20 +16,33 @@ interface BottomNavProps {
 
 const BottomNav: React.FC<BottomNavProps> = ({ items, activeScreen, setActiveScreen }) => {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-brand-surface border-t border-brand-border z-50">
-      <div className="container mx-auto flex justify-around max-w-lg">
-        {items.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => setActiveScreen(item.id)}
-            className={`flex flex-col items-center justify-center w-full py-3 transition-colors duration-200 ${
-              activeScreen === item.id ? 'text-brand-primary' : 'text-brand-secondary hover:text-brand-light'
-            }`}
-          >
-            <div className="w-6 h-6">{item.icon}</div>
-            <span className="text-xs mt-1">{item.label}</span>
-          </button>
-        ))}
+    <nav className="fixed bottom-0 left-0 right-0 z-[90] pb-safe">
+        {/* Advanced Glassmorphism Background */}
+        <div className="absolute inset-0 bg-[#1C1C1E]/80 backdrop-blur-2xl border-t border-white/10 shadow-[0_-5px_20px_rgba(0,0,0,0.3)]"></div>
+        
+        <div className="flex justify-around items-center relative z-10 h-[3.5rem] md:h-[4rem]">
+        {items.map((item) => {
+            const isActive = activeScreen === item.id;
+            return (
+                <button
+                key={item.id}
+                onClick={() => setActiveScreen(item.id)}
+                className={`group flex flex-col items-center justify-center w-full h-full transition-all duration-300 active:scale-90`}
+                >
+                {/* Icon Container with Glow on Active */}
+                <div className={`relative p-1.5 rounded-xl transition-all duration-500 ${isActive ? 'bg-brand-primary/10' : ''}`}>
+                    <div className={`w-6 h-6 transition-all duration-300 ${isActive ? 'text-brand-primary scale-110 drop-shadow-[0_0_8px_rgba(10,132,255,0.6)]' : 'text-gray-500 group-hover:text-white'}`}>
+                        {item.icon}
+                    </div>
+                </div>
+                
+                {/* Label: Visible on active OR on group hover */}
+                <span className={`text-[10px] font-semibold mt-0.5 transition-all duration-300 ${isActive ? 'text-brand-primary translate-y-0 opacity-100' : 'text-gray-500 translate-y-1 opacity-0 group-hover:opacity-100 group-hover:translate-y-0'}`}>
+                    {item.label}
+                </span>
+                </button>
+            )
+        })}
       </div>
     </nav>
   );

@@ -120,6 +120,7 @@ export const en = {
     reviewTitle: 'Review Email Summary',
     aiLabel: 'AI-Generated Label',
     aiSummary: 'AI-Generated Summary',
+    actionItems: 'Action Items',
     dueDate: 'Extracted Due Date (Optional)',
     saveEmail: 'Save Email',
     noEmails: 'No Emails Processed Yet',
@@ -168,6 +169,11 @@ export const en = {
     english: 'English',
     spanish: 'Español',
     logout: 'Log Out',
+  },
+  imagePicker: {
+    takePhoto: 'Take Photo',
+    chooseLibrary: 'Choose from Library',
+    cancel: 'Cancel',
   },
   confirmModal: {
     confirm: 'Confirm',

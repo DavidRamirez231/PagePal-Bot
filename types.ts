@@ -3,6 +3,7 @@ export interface User {
     id: string;
     name: string;
     email: string;
+    photoUrl?: string;
 }
 
 export interface KidProfile {
@@ -16,6 +17,7 @@ export interface KidProfile {
   doctorName: string;
   doctorPhone: string;
   teacherName: string;
+  photoUrl?: string;
 }
 
 export interface FormField {
@@ -33,6 +35,8 @@ export interface Form {
   createdAt: string;
   category: string;
   summary: string;
+  actionItems?: string[];
+  keyDates?: string[];
   status: 'pending' | 'completed' | 'deleted';
   updatedAt: string;
 }
@@ -43,6 +47,7 @@ export interface ProcessedEmail {
   originalContent: string;
   label: string;
   summary: string;
+  actionItems?: string[];
   dueDate?: string;
   createdAt: string;
   status: 'active' | 'deleted';

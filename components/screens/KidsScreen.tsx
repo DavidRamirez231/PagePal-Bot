@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+
+import React, { useState, useRef } from 'react';
 import type { KidProfile } from '../../types';
-import { PlusIcon, PencilIcon, TrashIcon } from '../Icons';
+import { PlusIcon, PencilIcon, TrashIcon, CameraIcon, ArrowUpTrayIcon } from '../Icons';
 import { useLanguage } from '../../contexts/LanguageContext';
+import CameraOverlay from '../CameraOverlay';
 
 interface KidsScreenProps {
   kids: KidProfile[];
@@ -14,6 +16,10 @@ const KidProfileForm: React.FC<{
     onCancel: () => void;
 }> = ({ kid, onSave, onCancel }) => {
     const { t } = useLanguage();
+    const [isCameraOpen, setIsCameraOpen] = useState(false);
+    const [showImageOptions, setShowImageOptions] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    
     const [formData, setFormData] = useState<Omit<KidProfile, 'id'>>(
         kid || {
             name: '',
@@ -25,6 +31,7 @@ const KidProfileForm: React.FC<{
             doctorName: '',
             doctorPhone: '',
             teacherName: '',
+            photoUrl: undefined,
         }
     );
 
@@ -33,39 +40,102 @@ const KidProfileForm: React.FC<{
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
+    const handlePhotoCapture = (dataUrl: string) => {
+        setFormData(prev => ({ ...prev, photoUrl: dataUrl }));
+        setIsCameraOpen(false);
+        setShowImageOptions(false);
+    };
+
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files?.[0]) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                handlePhotoCapture(reader.result as string);
+            };
+            reader.readAsDataURL(e.target.files[0]);
+        }
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         onSave({ ...formData, id: kid?.id || Date.now().toString() });
     };
 
-    const inputClass = "w-full bg-brand-dark border border-brand-border rounded-md px-3 py-2 text-brand-light focus:outline-none focus:ring-2 focus:ring-brand-primary";
+    const inputClass = "w-full bg-[#2C2C2E] border border-transparent rounded-xl px-4 py-3 text-brand-light focus:outline-none focus:ring-2 focus:ring-brand-primary placeholder-gray-500 transition-all";
+    const labelClass = "block text-xs font-bold text-brand-secondary uppercase mb-1 ml-1";
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-            <div className="bg-brand-surface rounded-lg p-8 w-full max-w-lg max-h-full overflow-y-auto">
-                <h2 className="text-2xl font-bold mb-6">{kid ? t('kids.editProfileTitle') : t('kids.addProfileTitle')}</h2>
+        <div className="fixed inset-0 z-[100] flex justify-center items-end md:items-center">
+            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onCancel}></div>
+            <div className="relative w-full md:max-w-lg bg-[#1C1C1E] rounded-t-3xl md:rounded-3xl p-6 max-h-[90vh] overflow-y-auto animate-slide-up flex flex-col shadow-2xl border border-white/10">
+                <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-6 flex-shrink-0" />
+                
+                <h2 className="text-2xl font-bold mb-6 text-white text-center">{kid ? t('kids.editProfileTitle') : t('kids.addProfileTitle')}</h2>
+                
+                {/* Photo Picker */}
+                <div className="flex justify-center mb-6">
+                    <button onClick={() => setShowImageOptions(true)} className="relative group w-24 h-24 rounded-full bg-[#2C2C2E] border-2 border-dashed border-gray-600 flex items-center justify-center overflow-hidden hover:border-brand-primary transition-colors">
+                        {formData.photoUrl ? (
+                            <img src={formData.photoUrl} className="w-full h-full object-cover" />
+                        ) : (
+                            <CameraIcon />
+                        )}
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <span className="text-xs font-bold text-white">Change</span>
+                        </div>
+                    </button>
+                </div>
+
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div><label className="block text-sm font-medium text-brand-secondary mb-1">{t('kids.nameLabel')}</label><input type="text" name="name" value={formData.name} onChange={handleChange} className={inputClass} required /></div>
-                        <div><label className="block text-sm font-medium text-brand-secondary mb-1">{t('kids.gradeLabel')}</label><input type="text" name="grade" value={formData.grade} onChange={handleChange} className={inputClass} /></div>
+                        <div><label className={labelClass}>{t('kids.nameLabel')}</label><input type="text" name="name" value={formData.name} onChange={handleChange} className={inputClass} required placeholder="Child's Name" /></div>
+                        <div><label className={labelClass}>{t('kids.gradeLabel')}</label><input type="text" name="grade" value={formData.grade} onChange={handleChange} className={inputClass} placeholder="e.g. 2nd Grade" /></div>
                     </div>
-                    <div><label className="block text-sm font-medium text-brand-secondary mb-1">{t('kids.allergiesLabel')}</label><input type="text" name="allergies" value={formData.allergies} onChange={handleChange} className={inputClass} /></div>
-                    <div><label className="block text-sm font-medium text-brand-secondary mb-1">{t('kids.medsLabel')}</label><input type="text" name="medications" value={formData.medications} onChange={handleChange} className={inputClass} /></div>
+                    <div><label className={labelClass}>{t('kids.allergiesLabel')}</label><input type="text" name="allergies" value={formData.allergies} onChange={handleChange} className={inputClass} placeholder="None" /></div>
+                    <div><label className={labelClass}>{t('kids.medsLabel')}</label><input type="text" name="medications" value={formData.medications} onChange={handleChange} className={inputClass} placeholder="None" /></div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div><label className="block text-sm font-medium text-brand-secondary mb-1">{t('kids.emergencyContactLabel')}</label><input type="text" name="emergencyContactName" value={formData.emergencyContactName} onChange={handleChange} className={inputClass} /></div>
-                        <div><label className="block text-sm font-medium text-brand-secondary mb-1">{t('kids.emergencyPhoneLabel')}</label><input type="text" name="emergencyContactPhone" value={formData.emergencyContactPhone} onChange={handleChange} className={inputClass} /></div>
+                        <div><label className={labelClass}>{t('kids.emergencyContactLabel')}</label><input type="text" name="emergencyContactName" value={formData.emergencyContactName} onChange={handleChange} className={inputClass} /></div>
+                        <div><label className={labelClass}>{t('kids.emergencyPhoneLabel')}</label><input type="text" name="emergencyContactPhone" value={formData.emergencyContactPhone} onChange={handleChange} className={inputClass} /></div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div><label className="block text-sm font-medium text-brand-secondary mb-1">{t('kids.doctorNameLabel')}</label><input type="text" name="doctorName" value={formData.doctorName} onChange={handleChange} className={inputClass} /></div>
-                        <div><label className="block text-sm font-medium text-brand-secondary mb-1">{t('kids.doctorPhoneLabel')}</label><input type="text" name="doctorPhone" value={formData.doctorPhone} onChange={handleChange} className={inputClass} /></div>
+                        <div><label className={labelClass}>{t('kids.doctorNameLabel')}</label><input type="text" name="doctorName" value={formData.doctorName} onChange={handleChange} className={inputClass} /></div>
+                        <div><label className={labelClass}>{t('kids.doctorPhoneLabel')}</label><input type="text" name="doctorPhone" value={formData.doctorPhone} onChange={handleChange} className={inputClass} /></div>
                     </div>
-                     <div><label className="block text-sm font-medium text-brand-secondary mb-1">{t('kids.teacherNameLabel')}</label><input type="text" name="teacherName" value={formData.teacherName} onChange={handleChange} className={inputClass} /></div>
-                    <div className="flex justify-end space-x-4 pt-4">
-                        <button type="button" onClick={onCancel} className="px-4 py-2 rounded-md text-brand-light bg-brand-border hover:bg-opacity-80 transition-colors">{t('kids.cancel')}</button>
-                        <button type="submit" className="px-4 py-2 rounded-md text-white bg-brand-primary hover:bg-brand-primary-hover transition-colors">{t('kids.saveProfile')}</button>
+                     <div><label className={labelClass}>{t('kids.teacherNameLabel')}</label><input type="text" name="teacherName" value={formData.teacherName} onChange={handleChange} className={inputClass} /></div>
+                    
+                    <div className="flex gap-3 pt-4">
+                        <button type="button" onClick={onCancel} className="flex-1 py-3.5 rounded-xl font-medium text-brand-light bg-[#2C2C2E] hover:bg-[#3A3A3C] active:scale-95 transition-all">{t('kids.cancel')}</button>
+                        <button type="submit" className="flex-1 py-3.5 rounded-xl font-bold text-white bg-brand-primary shadow-glow hover:bg-brand-primary-hover active:scale-95 transition-all">{t('kids.saveProfile')}</button>
                     </div>
                 </form>
             </div>
+            
+            {isCameraOpen && <CameraOverlay onCapture={handlePhotoCapture} onClose={() => setIsCameraOpen(false)} />}
+            
+             {/* Image Options Sheet */}
+            {showImageOptions && (
+                <div className="fixed inset-0 z-[150] flex flex-col justify-end">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowImageOptions(false)} />
+                    <div className="relative bg-[#1C1C1E] rounded-t-3xl p-6 space-y-3 animate-slide-up border-t border-white/10">
+                        <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-4" />
+                        <h3 className="text-center font-bold text-white mb-4">Update Photo</h3>
+                        
+                        <button onClick={() => { setShowImageOptions(false); setIsCameraOpen(true); }} className="w-full py-4 rounded-xl bg-[#2C2C2E] text-white font-medium flex items-center justify-center gap-2 active:scale-95 transition-transform hover:bg-[#3A3A3C]">
+                            <CameraIcon /> {t('imagePicker.takePhoto')}
+                        </button>
+                        
+                        <button onClick={() => { setShowImageOptions(false); fileInputRef.current?.click(); }} className="w-full py-4 rounded-xl bg-[#2C2C2E] text-white font-medium flex items-center justify-center gap-2 active:scale-95 transition-transform hover:bg-[#3A3A3C]">
+                            <ArrowUpTrayIcon /> {t('imagePicker.chooseLibrary')}
+                        </button>
+                        
+                        <button onClick={() => setShowImageOptions(false)} className="w-full py-4 rounded-xl bg-black text-red-400 font-medium active:scale-95 transition-transform mt-2">
+                            {t('imagePicker.cancel')}
+                        </button>
+                    </div>
+                </div>
+            )}
+            
+            <input type="file" ref={fileInputRef} hidden accept="image/*" onChange={handleFileSelect} />
         </div>
     );
 };
@@ -99,41 +169,59 @@ const KidsScreen: React.FC<KidsScreenProps> = ({ kids, setKids }) => {
   };
 
   return (
-    <div>
+    <div className="animate-in pb-20">
         <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl font-bold">{t('kids.title')}</h1>
-            <button onClick={() => { setEditingKid(null); setIsFormOpen(true); }} className="flex items-center gap-2 px-4 py-2 rounded-md text-white bg-brand-primary hover:bg-brand-primary-hover transition-colors">
+            <h1 className="text-3xl font-bold text-white tracking-tight">{t('kids.title')}</h1>
+            <button onClick={() => { setEditingKid(null); setIsFormOpen(true); }} className="flex items-center gap-2 px-4 py-2 rounded-full text-white bg-brand-primary shadow-glow hover:bg-brand-primary-hover active:scale-95 transition-all font-semibold">
                 <PlusIcon />
                 <span>{t('kids.addKid')}</span>
             </button>
         </div>
 
         {kids.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {kids.map(kid => (
-                    <div key={kid.id} className="bg-brand-surface p-6 rounded-lg border border-brand-border flex flex-col">
-                        <div className="flex-grow">
-                            <h3 className="text-2xl font-semibold text-brand-primary">{kid.name}</h3>
-                            <p className="text-brand-secondary">{t('kids.grade')} {kid.grade}</p>
-                            <div className="mt-4 space-y-2 text-sm">
-                                <p><strong className="text-brand-light">{t('kids.allergies')}:</strong> {kid.allergies || 'N/A'}</p>
-                                <p><strong className="text-brand-light">{t('kids.emergency')}:</strong> {kid.emergencyContactName} ({kid.emergencyContactPhone || 'N/A'})</p>
+            <div className="grid grid-cols-1 gap-4">
+                {kids.map((kid, idx) => (
+                    <div 
+                        key={kid.id} 
+                        className="glass-panel p-5 rounded-3xl flex items-center gap-5 group hover:bg-white/5 transition-colors"
+                        style={{ animationDelay: `${idx * 100}ms` }}
+                    >
+                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-brand-primary to-purple-600 p-[2px] shadow-lg flex-shrink-0">
+                            <div className="w-full h-full rounded-full overflow-hidden bg-brand-surface border border-brand-dark">
+                                {kid.photoUrl ? (
+                                    <img src={kid.photoUrl} alt={kid.name} className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-xl font-bold text-white bg-brand-surface-highlight">
+                                        {kid.name.charAt(0)}
+                                    </div>
+                                )}
                             </div>
                         </div>
-                        <div className="flex justify-end space-x-2 mt-6">
-                            <button onClick={() => handleEdit(kid)} className="p-2 text-brand-secondary hover:text-brand-primary"><PencilIcon /></button>
-                            <button onClick={() => handleDelete(kid.id)} className="p-2 text-brand-secondary hover:text-red-500"><TrashIcon /></button>
+                        
+                        <div className="flex-grow min-w-0">
+                            <h3 className="text-xl font-bold text-white truncate">{kid.name}</h3>
+                            <p className="text-brand-primary font-medium text-sm">{kid.grade}</p>
+                            <p className="text-brand-secondary text-xs mt-1 truncate">
+                                {kid.allergies ? `⚠️ ${kid.allergies}` : 'No known allergies'}
+                            </p>
+                        </div>
+
+                        <div className="flex gap-2">
+                            <button onClick={() => handleEdit(kid)} className="p-2.5 bg-[#2C2C2E] rounded-full text-brand-secondary hover:text-white hover:bg-brand-primary/20 transition-all active:scale-90"><div className="w-5 h-5"><PencilIcon /></div></button>
+                            <button onClick={() => handleDelete(kid.id)} className="p-2.5 bg-[#2C2C2E] rounded-full text-brand-secondary hover:text-red-400 hover:bg-red-500/10 transition-all active:scale-90"><div className="w-5 h-5"><TrashIcon /></div></button>
                         </div>
                     </div>
                 ))}
             </div>
         ) : (
-            <div className="text-center py-16 px-4 bg-brand-surface rounded-lg border-2 border-dashed border-brand-border">
-                <h3 className="text-xl font-semibold text-brand-light">{t('kids.noProfiles')}</h3>
-                <p className="text-brand-secondary mt-2">{t('kids.noProfilesDesc')}</p>
-                <button onClick={() => setIsFormOpen(true)} className="mt-6 flex mx-auto items-center gap-2 px-4 py-2 rounded-md text-white bg-brand-primary hover:bg-brand-primary-hover transition-colors">
-                    <PlusIcon />
-                    <span>{t('kids.addFirstKid')}</span>
+            <div className="text-center py-16 px-6 glass-panel rounded-3xl border-2 border-dashed border-white/10 flex flex-col items-center">
+                <div className="w-20 h-20 bg-[#2C2C2E] rounded-full flex items-center justify-center text-gray-500 mb-4">
+                    <div className="w-10 h-10"><PlusIcon /></div>
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">{t('kids.noProfiles')}</h3>
+                <p className="text-brand-secondary mb-6 max-w-xs mx-auto">{t('kids.noProfilesDesc')}</p>
+                <button onClick={() => setIsFormOpen(true)} className="px-6 py-3 rounded-xl text-white bg-brand-primary shadow-glow hover:bg-brand-primary-hover active:scale-95 transition-all font-bold">
+                    {t('kids.addFirstKid')}
                 </button>
             </div>
         )}

@@ -24,7 +24,12 @@ function fileToGenerativePart(base64: string, mimeType: string) {
 export const processFormWithGemini = async (
     imageDataUrl: string, 
     kidProfile: KidProfile
-): Promise<{ summary: { en: string; es: string }; fields: FormField[] }> => {
+): Promise<{ 
+    summary: { en: string; es: string }; 
+    actionItems: { en: string[]; es: string[] };
+    keyDates: string[];
+    fields: FormField[] 
+}> => {
     const model = 'gemini-2.5-flash';
     const base64Data = imageDataUrl.split(',')[1];
     const mimeType = imageDataUrl.match(/data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+).*,.*/)?.[1] || 'image/jpeg';
@@ -36,11 +41,16 @@ export const processFormWithGemini = async (
       You are an expert at reading forms and extracting information.
       Analyze the provided form image and the child's data. 
       
-      First, provide a brief, one-sentence summary of what this form is for and what action the parent needs to take (e.g., "Field trip permission slip, requires parent signature.").
-      **Provide this summary in both English and Spanish.**
+      1. **Summary**: Provide a detailed summary of the form's purpose.
+         - Return this in both English ('en') and Spanish ('es').
 
-      Second, identify all input fields on the form and fill them with the corresponding data from the child's profile JSON.
-      Only return fields for which you found a match in the child's profile.
+      2. **Action Items**: Identify specific actions the parent needs to take (e.g., "Sign at the bottom", "Attach payment", "Return by Friday").
+         - Return a list of strings in both English ('en') and Spanish ('es').
+
+      3. **Key Dates**: Extract any specific dates mentioned in the form (due dates, event dates) in YYYY-MM-DD format.
+
+      4. **Form Filling**: Identify all input fields on the form and fill them with the corresponding data from the child's profile JSON.
+         - Only return fields for which you found a match in the child's profile.
 
       The child's profile data is:
       ${kidProfileString}
@@ -57,38 +67,40 @@ export const processFormWithGemini = async (
                     properties: {
                         summary: {
                             type: Type.OBJECT,
-                            description: "A brief, one-sentence summary of the form's purpose in both English and Spanish.",
+                            description: "A detailed summary of the form.",
                             properties: {
-                                en: {
-                                    type: Type.STRING,
-                                    description: "The summary in English."
-                                },
-                                es: {
-                                    type: Type.STRING,
-                                    description: "The summary in Spanish."
-                                }
+                                en: { type: Type.STRING },
+                                es: { type: Type.STRING }
                             },
                             required: ['en', 'es']
+                        },
+                        actionItems: {
+                            type: Type.OBJECT,
+                            description: "List of actions required from the parent.",
+                            properties: {
+                                en: { type: Type.ARRAY, items: { type: Type.STRING } },
+                                es: { type: Type.ARRAY, items: { type: Type.STRING } }
+                            },
+                            required: ['en', 'es']
+                        },
+                        keyDates: {
+                            type: Type.ARRAY,
+                            description: "List of dates found in YYYY-MM-DD format.",
+                            items: { type: Type.STRING }
                         },
                         fields: {
                             type: Type.ARRAY,
                             items: {
                                 type: Type.OBJECT,
                                 properties: {
-                                    label: {
-                                        type: Type.STRING,
-                                        description: 'The label of the form field (e.g., "Full Name", "Date of Birth").'
-                                    },
-                                    value: {
-                                        type: Type.STRING,
-                                        description: 'The corresponding value from the child\'s profile.'
-                                    }
+                                    label: { type: Type.STRING },
+                                    value: { type: Type.STRING }
                                 },
                                 required: ['label', 'value']
                             }
                         }
                     },
-                    required: ['summary', 'fields']
+                    required: ['summary', 'actionItems', 'keyDates', 'fields']
                 },
             }
         });
@@ -101,8 +113,12 @@ export const processFormWithGemini = async (
             es: 'No se generó ningún resumen.'
         };
 
+        const defaultActions = { en: [], es: [] };
+
         return {
             summary: parsedJson.summary || defaultSummary,
+            actionItems: parsedJson.actionItems || defaultActions,
+            keyDates: parsedJson.keyDates || [],
             fields: parsedJson.fields || []
         };
 
@@ -116,7 +132,7 @@ export const processFormWithGemini = async (
 export const processEmailWithGemini = async (
     emailContent: string,
     kidName: string
-): Promise<{ label: string; summary: string; dueDate: string | null }> => {
+): Promise<{ label: string; summary: string; actionItems: string[]; dueDate: string | null }> => {
     const model = 'gemini-2.5-flash';
     const prompt = `
       You are an expert at analyzing communications for parents.
@@ -124,9 +140,11 @@ export const processEmailWithGemini = async (
 
       First, create a short, descriptive label for the email (max 10 words). Example: "Permission Slip for Zoo Field Trip".
       
-      Second, provide a concise summary of the key information and any actions the parent needs to take.
+      Second, provide a concise summary of the key information.
       
-      Third, identify if there is a specific due date or event date mentioned. If so, return it in YYYY-MM-DD format. If not, return null.
+      Third, extract a list of specific action items or instructions the parent needs to follow (e.g., "Sign permission slip", "Send $5 cash", "Wear blue shirt").
+
+      Fourth, identify if there is a specific due date or event date mentioned. If so, return it in YYYY-MM-DD format. If not, return null.
 
       Email content:
       """
@@ -144,10 +162,15 @@ export const processEmailWithGemini = async (
                     type: Type.OBJECT,
                     properties: {
                         label: { type: Type.STRING, description: "A short, descriptive label for the email." },
-                        summary: { type: Type.STRING, description: "A concise summary of the email's content and required actions." },
+                        summary: { type: Type.STRING, description: "A concise summary of the email's content." },
+                        actionItems: { 
+                            type: Type.ARRAY, 
+                            description: "A list of specific actions the parent needs to take.",
+                            items: { type: Type.STRING }
+                        },
                         dueDate: { type: Type.STRING, description: "The due date or event date in YYYY-MM-DD format, or null if not present." }
                     },
-                    required: ['label', 'summary']
+                    required: ['label', 'summary', 'actionItems']
                 }
             }
         });
@@ -158,6 +181,7 @@ export const processEmailWithGemini = async (
         return {
             label: parsedJson.label || 'Untitled Email',
             summary: parsedJson.summary || 'No summary could be generated.',
+            actionItems: parsedJson.actionItems || [],
             dueDate: parsedJson.dueDate || null
         };
     } catch (error) {

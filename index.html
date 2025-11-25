@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>PagePal - Your Personal Forms Assistant</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -11,26 +11,57 @@
         theme: {
           extend: {
             colors: {
-              'brand-dark': '#050505',
-              'brand-surface': '#1A1A1A',
-              'brand-border': '#333333',
-              'brand-primary': '#22D3EE',
-              'brand-primary-hover': '#67E8F9',
-              'brand-secondary': '#A0A0A0',
-              'brand-light': '#EFEFEF',
-              'brand-accent': '#22D3EE',
+              'brand-dark': '#000000', /* Pitch black for OLED feel */
+              'brand-surface': '#1C1C1E', /* iOS Dark Gray */
+              'brand-surface-highlight': '#2C2C2E',
+              'brand-border': '#3A3A3C',
+              'brand-primary': '#0A84FF', /* iOS Blue */
+              'brand-primary-hover': '#409CFF',
+              'brand-secondary': '#8E8E93',
+              'brand-light': '#F2F2F7',
+              'brand-danger': '#FF453A',
             },
             fontFamily: {
-              sans: ['Inter', 'sans-serif'],
+              sans: ['-apple-system', 'BlinkMacSystemFont', 'Inter', 'sans-serif'],
+            },
+            boxShadow: {
+              'glow': '0 0 20px rgba(10, 132, 255, 0.3)',
+              'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
+            },
+            animation: {
+              'in': 'enter 0.4s cubic-bezier(0.2, 0.8, 0.2, 1)',
+              'out': 'exit 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)',
+              'slide-up': 'slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
+              'slide-down': 'slideDown 0.3s ease-out',
+              'scale-down': 'scaleDown 0.1s ease-out',
+              'fade-scale': 'fadeScale 0.4s cubic-bezier(0.2, 0.8, 0.2, 1)',
+              'pulse-slow': 'pulse 3s infinite',
             },
             keyframes: {
-              'fade-in-scale': {
+              enter: {
                 '0%': { opacity: '0', transform: 'scale(0.95)' },
                 '100%': { opacity: '1', transform: 'scale(1)' },
               },
-            },
-            animation: {
-              'fade-in-scale': 'fade-in-scale 1.5s ease-out forwards',
+              exit: {
+                '0%': { opacity: '1', transform: 'scale(1)' },
+                '100%': { opacity: '0', transform: 'scale(0.95)' },
+              },
+              slideUp: {
+                '0%': { transform: 'translateY(100%)' },
+                '100%': { transform: 'translateY(0)' },
+              },
+              slideDown: {
+                '0%': { transform: 'translateY(0)' },
+                '100%': { transform: 'translateY(100%)' },
+              },
+              scaleDown: {
+                '0%': { transform: 'scale(1)' },
+                '100%': { transform: 'scale(0.95)' },
+              },
+              fadeScale: {
+                '0%': { opacity: '0', transform: 'scale(0.98) translateY(10px)' },
+                '100%': { opacity: '1', transform: 'scale(1) translateY(0)' },
+              }
             },
           },
         },
@@ -40,18 +71,39 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script type="importmap">
-{
-  "imports": {
-    "react": "https://aistudiocdn.com/react@^19.2.0",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-    "react/": "https://aistudiocdn.com/react@^19.2.0/",
-    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.29.1"
-  }
-}
-</script>
-</head>
-  <body class="bg-brand-dark text-brand-light font-sans">
-    <div id="root"></div>
+    <script type="importmap">
+    {
+      "imports": {
+        "react": "https://aistudiocdn.com/react@^19.2.0",
+        "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+        "react/": "https://aistudiocdn.com/react@^19.2.0/",
+        "@google/genai": "https://aistudiocdn.com/@google/genai@^1.29.1"
+      }
+    }
+    </script>
+    <style>
+      /* Hide scrollbar for Chrome, Safari and Opera */
+      .scrollbar-hide::-webkit-scrollbar { display: none; }
+      /* Hide scrollbar for IE, Edge and Firefox */
+      .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+      
+      /* Smooth scrolling */
+      html { scroll-behavior: smooth; }
+      
+      /* Mobile tap highlight removal */
+      * { -webkit-tap-highlight-color: transparent; }
+
+      input, textarea, select { font-size: 16px; }
+      
+      .glass-panel {
+        background: rgba(28, 28, 30, 0.7);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+    </style>
+  </head>
+  <body class="bg-brand-dark text-brand-light font-sans antialiased selection:bg-brand-primary selection:text-white overflow-hidden fixed inset-0">
+    <div id="root" class="h-full overflow-hidden"></div>
   </body>
 </html>

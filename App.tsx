@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { HomeIcon, DocumentTextIcon, UserGroupIcon, CalendarIcon, Cog6ToothIcon } from './components/Icons';
 import BottomNav from './components/BottomNav';
@@ -44,6 +45,8 @@ const AppContent: React.FC = () => {
                     ...form,
                     category: form.category || 'Other',
                     summary: finalSummary,
+                    actionItems: form.actionItems || [],
+                    keyDates: form.keyDates || [],
                     status: form.status || 'pending',
                     updatedAt: form.updatedAt || form.createdAt,
                 };
@@ -57,7 +60,7 @@ const AppContent: React.FC = () => {
     } catch (error) {
       console.error("Failed to parse data from localStorage", error);
     }
-  }, [language]); // Depends on language to correctly normalize legacy data
+  }, [language]); 
 
   useEffect(() => {
     if (isLoggedIn && currentUser) {
@@ -192,15 +195,20 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-brand-dark text-brand-light flex flex-col font-sans">
-      <main className="flex-grow container mx-auto px-4 py-8 pb-24">
-        {renderScreen()}
-      </main>
-      <BottomNav
-        items={navItems}
-        activeScreen={activeScreen}
-        setActiveScreen={setActiveScreen}
-      />
+    <div className="h-full bg-brand-dark text-brand-light flex flex-col font-sans">
+        {/* Main Content Area */}
+        <main className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide pb-24 pt-safe-top px-4">
+             {/* Keyed div triggers React reconciliation and CSS animation on change */}
+            <div key={activeScreen} className="animate-fade-scale origin-center py-6">
+                {renderScreen()}
+            </div>
+        </main>
+
+        <BottomNav
+            items={navItems}
+            activeScreen={activeScreen}
+            setActiveScreen={setActiveScreen}
+        />
     </div>
   );
 };
