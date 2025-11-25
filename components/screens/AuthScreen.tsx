@@ -9,7 +9,7 @@ interface AuthScreenProps {
 }
 
 const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
-    const { t } = useLanguage();
+    const { t, language, setLanguage } = useLanguage();
     const [isLoginView, setIsLoginView] = useState(true);
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
@@ -79,6 +79,16 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
     return (
         <div className={`min-h-screen bg-brand-dark flex flex-col justify-center items-center p-4 relative overflow-hidden transition-all duration-700 ${isExiting ? 'scale-110 opacity-0' : 'opacity-100'}`}>
             
+            {/* Language Toggle */}
+            <div className="absolute top-6 right-6 z-50 animate-in" style={{ animationDelay: '1000ms' }}>
+                <button 
+                    onClick={() => setLanguage(language === 'en' ? 'es' : 'en')}
+                    className="px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white text-sm font-medium backdrop-blur-md transition-colors border border-white/5 active:scale-95"
+                >
+                    {language === 'en' ? 'Español' : 'English'}
+                </button>
+            </div>
+
             {/* Background Decor */}
             <div className="absolute top-[-20%] left-[-20%] w-[500px] h-[500px] bg-brand-primary/10 rounded-full blur-[100px] pointer-events-none" />
             <div className="absolute bottom-[-10%] right-[-10%] w-[400px] h-[400px] bg-purple-500/10 rounded-full blur-[80px] pointer-events-none" />

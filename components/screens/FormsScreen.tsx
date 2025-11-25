@@ -336,14 +336,8 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
         <div className="mb-6 space-y-4">
             <div className="flex items-center justify-between">
                 <h1 className="text-3xl font-bold text-white tracking-tight">{t('forms.title')}</h1>
-                <div className="flex gap-2">
-                    <button onClick={() => setIsEmailModalOpen(true)} className="p-3 bg-[#2C2C2E] rounded-full text-brand-primary hover:bg-white/10 active:scale-95 transition-all">
-                        <EnvelopeIcon />
-                    </button>
-                    <button onClick={() => setScreenState('upload')} className="p-3 bg-brand-primary rounded-full text-white shadow-glow hover:bg-brand-primary-hover active:scale-95 transition-all">
-                        <PlusIcon />
-                    </button>
-                </div>
+                {/* Header buttons removed in favor of in-tab buttons */}
+                <div className="flex gap-2"></div>
             </div>
 
             <div className="relative">
@@ -384,54 +378,82 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
         {/* Content Lists */}
         <div className="flex-1 space-y-3 pb-20">
             {/* Active Forms List */}
-            {view === 'active' && filteredForms.map(form => (
-                 <div key={form.id} onClick={() => { setSelectedItem({ type: 'form', data: form }); setScreenState('details'); }} className="glass-panel p-4 rounded-2xl active:scale-[0.98] transition-all cursor-pointer flex gap-4 items-center group">
-                    <div className="relative group/select z-20">
-                        <div onClick={(e) => { e.stopPropagation(); toggleSelection(form.id); }} className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${selectedIds.has(form.id) ? 'bg-brand-primary border-brand-primary' : 'border-gray-600'}`}>
-                            {selectedIds.has(form.id) && <div className="w-2.5 h-2.5 bg-white rounded-full" />}
+            {view === 'active' && (
+                <>
+                    <button 
+                        onClick={() => setScreenState('upload')}
+                        className="w-full mb-4 p-4 rounded-2xl border-2 border-dashed border-brand-border hover:border-brand-primary/50 hover:bg-brand-surface-highlight group transition-all flex items-center justify-center gap-2"
+                    >
+                        <div className="p-2 bg-brand-primary/10 rounded-full text-brand-primary group-hover:scale-110 transition-transform">
+                            <PlusIcon />
                         </div>
-                         {/* Tooltip */}
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-[#2C2C2E] border border-white/10 rounded-lg shadow-xl opacity-0 translate-y-1 group-hover/select:opacity-100 group-hover/select:translate-y-0 transition-all duration-200 pointer-events-none whitespace-nowrap z-50 backdrop-blur-md">
-                            <span className="text-xs font-bold text-white">{selectedIds.has(form.id) ? t('forms.deselect') : t('forms.select')}</span>
-                             {/* Triangle */}
-                             <div className="absolute top-full left-1/2 -translate-x-1/2 border-l-[6px] border-r-[6px] border-t-[6px] border-l-transparent border-r-transparent border-t-[#2C2C2E]"></div>
+                        <span className="font-semibold text-brand-light group-hover:text-brand-primary transition-colors">{t('forms.scanNewForm')}</span>
+                    </button>
+
+                    {filteredForms.map(form => (
+                        <div key={form.id} onClick={() => { setSelectedItem({ type: 'form', data: form }); setScreenState('details'); }} className="glass-panel p-4 rounded-2xl active:scale-[0.98] transition-all cursor-pointer flex gap-4 items-center group">
+                            <div className="relative group/select z-20">
+                                <div onClick={(e) => { e.stopPropagation(); toggleSelection(form.id); }} className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${selectedIds.has(form.id) ? 'bg-brand-primary border-brand-primary' : 'border-gray-600'}`}>
+                                    {selectedIds.has(form.id) && <div className="w-2.5 h-2.5 bg-white rounded-full" />}
+                                </div>
+                                {/* Tooltip */}
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-[#2C2C2E] border border-white/10 rounded-lg shadow-xl opacity-0 translate-y-1 group-hover/select:opacity-100 group-hover/select:translate-y-0 transition-all duration-200 pointer-events-none whitespace-nowrap z-50 backdrop-blur-md">
+                                    <span className="text-xs font-bold text-white">{selectedIds.has(form.id) ? t('forms.deselect') : t('forms.select')}</span>
+                                    {/* Triangle */}
+                                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-l-[6px] border-r-[6px] border-t-[6px] border-l-transparent border-r-transparent border-t-[#2C2C2E]"></div>
+                                </div>
+                            </div>
+                            
+                            <img src={form.imageDataUrl} className="w-16 h-16 rounded-xl object-cover bg-black border border-white/5" />
+                            <div className="flex-1 min-w-0">
+                                <div className="flex justify-between items-start mb-1">
+                                    <h3 className="font-semibold text-white truncate pr-2">{form.formName}</h3>
+                                    {getStatusBadge(form.status)}
+                                </div>
+                                <p className="text-sm text-gray-400 truncate">{form.summary}</p>
+                            </div>
                         </div>
-                    </div>
-                    
-                    <img src={form.imageDataUrl} className="w-16 h-16 rounded-xl object-cover bg-black border border-white/5" />
-                    <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-start mb-1">
-                            <h3 className="font-semibold text-white truncate pr-2">{form.formName}</h3>
-                            {getStatusBadge(form.status)}
-                        </div>
-                        <p className="text-sm text-gray-400 truncate">{form.summary}</p>
-                    </div>
-                 </div>
-            ))}
+                    ))}
+                </>
+            )}
 
             {/* Emails List */}
-            {view === 'emails' && filteredEmails.map(email => (
-                 <div key={email.id} onClick={() => { setSelectedItem({ type: 'email', data: email }); setScreenState('details'); }} className="glass-panel p-4 rounded-2xl active:scale-[0.98] transition-all cursor-pointer flex gap-4 items-center group">
-                    <div className="relative group/select z-20">
-                        <div onClick={(e) => { e.stopPropagation(); toggleSelection(email.id); }} className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${selectedIds.has(email.id) ? 'bg-brand-primary border-brand-primary' : 'border-gray-600'}`}>
-                            {selectedIds.has(email.id) && <div className="w-2.5 h-2.5 bg-white rounded-full" />}
+            {view === 'emails' && (
+                <>
+                    <button 
+                        onClick={() => setIsEmailModalOpen(true)}
+                        className="w-full mb-4 p-4 rounded-2xl border-2 border-dashed border-brand-border hover:border-brand-primary/50 hover:bg-brand-surface-highlight group transition-all flex items-center justify-center gap-2"
+                    >
+                        <div className="p-2 bg-purple-500/10 rounded-full text-purple-400 group-hover:scale-110 transition-transform">
+                            <EnvelopeIcon />
                         </div>
-                         {/* Tooltip */}
-                         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-[#2C2C2E] border border-white/10 rounded-lg shadow-xl opacity-0 translate-y-1 group-hover/select:opacity-100 group-hover/select:translate-y-0 transition-all duration-200 pointer-events-none whitespace-nowrap z-50 backdrop-blur-md">
-                            <span className="text-xs font-bold text-white">{selectedIds.has(email.id) ? t('forms.deselect') : t('forms.select')}</span>
-                             {/* Triangle */}
-                             <div className="absolute top-full left-1/2 -translate-x-1/2 border-l-[6px] border-r-[6px] border-t-[6px] border-l-transparent border-r-transparent border-t-[#2C2C2E]"></div>
+                        <span className="font-semibold text-brand-light group-hover:text-purple-400 transition-colors">{t('emails.addEmail')}</span>
+                    </button>
+
+                    {filteredEmails.map(email => (
+                        <div key={email.id} onClick={() => { setSelectedItem({ type: 'email', data: email }); setScreenState('details'); }} className="glass-panel p-4 rounded-2xl active:scale-[0.98] transition-all cursor-pointer flex gap-4 items-center group">
+                            <div className="relative group/select z-20">
+                                <div onClick={(e) => { e.stopPropagation(); toggleSelection(email.id); }} className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${selectedIds.has(email.id) ? 'bg-brand-primary border-brand-primary' : 'border-gray-600'}`}>
+                                    {selectedIds.has(email.id) && <div className="w-2.5 h-2.5 bg-white rounded-full" />}
+                                </div>
+                                {/* Tooltip */}
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-[#2C2C2E] border border-white/10 rounded-lg shadow-xl opacity-0 translate-y-1 group-hover/select:opacity-100 group-hover/select:translate-y-0 transition-all duration-200 pointer-events-none whitespace-nowrap z-50 backdrop-blur-md">
+                                    <span className="text-xs font-bold text-white">{selectedIds.has(email.id) ? t('forms.deselect') : t('forms.select')}</span>
+                                    {/* Triangle */}
+                                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-l-[6px] border-r-[6px] border-t-[6px] border-l-transparent border-r-transparent border-t-[#2C2C2E]"></div>
+                                </div>
+                            </div>
+                            <div className="w-16 h-16 rounded-xl bg-brand-primary/20 flex items-center justify-center text-brand-primary flex-shrink-0">
+                                <EnvelopeIcon />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <h3 className="font-semibold text-white truncate">{email.label}</h3>
+                                <p className="text-sm text-gray-400 truncate mt-1">{email.summary}</p>
+                            </div>
                         </div>
-                    </div>
-                    <div className="w-16 h-16 rounded-xl bg-brand-primary/20 flex items-center justify-center text-brand-primary flex-shrink-0">
-                        <EnvelopeIcon />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-white truncate">{email.label}</h3>
-                        <p className="text-sm text-gray-400 truncate mt-1">{email.summary}</p>
-                    </div>
-                 </div>
-            ))}
+                    ))}
+                </>
+            )}
 
             {/* History List */}
             {view === 'history' && filteredForms.map(form => (
@@ -526,7 +548,7 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
                      <div>
                          <label className={labelStyle}>{t('forms.selectChild')}</label>
                          <select value={selectedKidId} onChange={e => setSelectedKidId(e.target.value)} className={inputStyle}>
-                             <option value="">Select...</option>
+                             <option value="">{t('forms.selectChild')}</option>
                              {kids.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
                          </select>
                      </div>
@@ -664,33 +686,33 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
         )}
 
         {/* 5. Email Modal */}
-        <ModalSheet isOpen={isEmailModalOpen} onClose={() => setIsEmailModalOpen(false)} title="Process Email">
+        <ModalSheet isOpen={isEmailModalOpen} onClose={() => setIsEmailModalOpen(false)} title={t('emails.addEmailTitle')}>
             {emailStep === 'input' && (
                 <div className="space-y-4">
                     <select value={selectedKidId} onChange={e => setSelectedKidId(e.target.value)} className={inputStyle}>
-                         <option value="">Select Child...</option>
+                         <option value="">{t('emails.selectChild')}</option>
                          {kids.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
                     </select>
                     <textarea 
                         value={emailContent} 
                         onChange={e => setEmailContent(e.target.value)} 
                         className={`${inputStyle} min-h-[200px]`} 
-                        placeholder="Paste email content..." 
+                        placeholder={t('emails.pasteEmail')}
                     />
-                    <button onClick={handleProcessEmail} className="w-full bg-brand-primary text-white py-4 rounded-2xl font-bold shadow-glow active:scale-95 transition-transform">Process</button>
+                    <button onClick={handleProcessEmail} className="w-full bg-brand-primary text-white py-4 rounded-2xl font-bold shadow-glow active:scale-95 transition-transform">{t('emails.processEmail')}</button>
                 </div>
             )}
             {emailStep === 'processing' && (
                  <div className="flex flex-col items-center py-10">
                     <div className="w-12 h-12 border-4 border-brand-primary border-t-transparent rounded-full animate-spin mb-4" />
-                    <p>Analyzing...</p>
+                    <p>{t('emails.processing')}</p>
                  </div>
             )}
             {emailStep === 'review' && processedEmailData && (
                 <div className="space-y-4">
                     <input value={processedEmailData.label} onChange={e => setProcessedEmailData({...processedEmailData, label: e.target.value})} className={inputStyle} />
                     <textarea value={processedEmailData.summary} onChange={e => setProcessedEmailData({...processedEmailData, summary: e.target.value})} className={`${inputStyle} h-32`} />
-                    <button onClick={saveEmail} className="w-full bg-brand-primary text-white py-4 rounded-2xl font-bold">Save Email</button>
+                    <button onClick={saveEmail} className="w-full bg-brand-primary text-white py-4 rounded-2xl font-bold">{t('emails.saveEmail')}</button>
                 </div>
             )}
         </ModalSheet>

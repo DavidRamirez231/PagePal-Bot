@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import type { Task, Form, KidProfile, ProcessedEmail } from '../../types';
 import { CheckCircleIcon, TrashIcon, ChevronLeftIcon, ChevronRightIcon } from '../Icons';
@@ -14,7 +15,7 @@ interface TasksScreenProps {
 }
 
 const TasksScreen: React.FC<TasksScreenProps> = ({ tasks, forms, kids, setForms, emails, setEmails }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [modalState, setModalState] = useState<{
     isOpen: boolean;
@@ -96,7 +97,7 @@ const TasksScreen: React.FC<TasksScreenProps> = ({ tasks, forms, kids, setForms,
   const renderHeader = () => (
       <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold capitalize">
-              {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
+              {currentDate.toLocaleString(language === 'es' ? 'es-ES' : 'en-US', { month: 'long', year: 'numeric' })}
           </h2>
           <div className="flex space-x-2">
               <button onClick={prevMonth} className="p-2 rounded-full hover:bg-brand-surface transition-colors">
