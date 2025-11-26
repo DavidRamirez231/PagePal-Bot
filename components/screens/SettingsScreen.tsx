@@ -1,8 +1,9 @@
 
 import React, { useState, useRef } from 'react';
 import type { User } from '../../types';
-import { ArrowRightOnRectangleIcon, LanguageIcon, CameraIcon, PencilIcon, TrashIcon, ArrowUpTrayIcon } from '../Icons';
+import { ArrowRightOnRectangleIcon, LanguageIcon, CameraIcon, PencilIcon, TrashIcon, ArrowUpTrayIcon, SunIcon, MoonIcon } from '../Icons';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import CameraOverlay from '../CameraOverlay';
 
 interface SettingsScreenProps {
@@ -12,6 +13,7 @@ interface SettingsScreenProps {
 
 const SettingsScreen: React.FC<SettingsScreenProps> = ({ currentUser, onLogout }) => {
   const { language, setLanguage, t } = useLanguage();
+  const { theme, toggleTheme } = useTheme();
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [showImageOptions, setShowImageOptions] = useState(false);
   const [updatedUser, setUpdatedUser] = useState<User | null>(currentUser);
@@ -57,12 +59,19 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ currentUser, onLogout }
 
   return (
     <div className="animate-in pb-20">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">{t('settings.title')}</h1>
+      <div className="mb-8 flex justify-between items-center">
+        <h1 className="text-3xl font-bold text-brand-light">{t('settings.title')}</h1>
+        <button 
+          onClick={toggleTheme}
+          className="p-3 rounded-full bg-brand-surface border border-brand-border text-brand-light active:scale-95 transition-all shadow-sm flex items-center gap-2"
+        >
+          {theme === 'dark' ? <MoonIcon /> : <SunIcon />}
+          <span className="text-sm font-medium">{theme === 'dark' ? t('settings.darkMode') : t('settings.lightMode')}</span>
+        </button>
       </div>
 
       {/* Profile Section */}
-      <div className="bg-brand-surface p-6 rounded-3xl border border-brand-border mb-6 flex flex-col items-center">
+      <div className="bg-brand-surface p-6 rounded-3xl border border-brand-border mb-6 flex flex-col items-center shadow-glass">
          <div className="relative group mb-4">
             <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-brand-surface-highlight bg-brand-surface-highlight flex items-center justify-center">
                 {updatedUser?.photoUrl ? (
@@ -86,24 +95,24 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ currentUser, onLogout }
                 <div className="w-3 h-3"><PencilIcon /></div>
             </button>
          </div>
-         <h2 className="text-xl font-bold text-white">{updatedUser?.name}</h2>
+         <h2 className="text-xl font-bold text-brand-light">{updatedUser?.name}</h2>
          <p className="text-brand-secondary text-sm">{updatedUser?.email}</p>
       </div>
 
-      <div className="bg-brand-surface p-6 rounded-3xl border border-brand-border">
+      <div className="bg-brand-surface p-6 rounded-3xl border border-brand-border shadow-glass">
         <h2 className="text-xl font-semibold text-brand-primary mb-4 flex items-center gap-2">
           <LanguageIcon /> {t('settings.language')}
         </h2>
         <div className="flex space-x-2">
             <button 
                 onClick={() => setLanguage('en')}
-                className={`w-full py-3 rounded-xl font-medium transition-all active:scale-95 ${language === 'en' ? 'bg-brand-primary text-white shadow-glow' : 'bg-[#2C2C2E] text-gray-400 hover:bg-[#3A3A3C]'}`}
+                className={`w-full py-3 rounded-xl font-medium transition-all active:scale-95 ${language === 'en' ? 'bg-brand-primary text-white shadow-glow' : 'bg-brand-surface-highlight text-brand-secondary hover:bg-brand-border'}`}
             >
                 {t('settings.english')}
             </button>
             <button 
                 onClick={() => setLanguage('es')}
-                className={`w-full py-3 rounded-xl font-medium transition-all active:scale-95 ${language === 'es' ? 'bg-brand-primary text-white shadow-glow' : 'bg-[#2C2C2E] text-gray-400 hover:bg-[#3A3A3C]'}`}
+                className={`w-full py-3 rounded-xl font-medium transition-all active:scale-95 ${language === 'es' ? 'bg-brand-primary text-white shadow-glow' : 'bg-brand-surface-highlight text-brand-secondary hover:bg-brand-border'}`}
             >
                 {t('settings.spanish')}
             </button>
@@ -128,19 +137,19 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ currentUser, onLogout }
       {showImageOptions && (
           <div className="fixed inset-0 z-[150] flex flex-col justify-end">
              <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowImageOptions(false)} />
-             <div className="relative bg-[#1C1C1E] rounded-t-3xl p-6 space-y-3 animate-slide-up border-t border-white/10">
-                 <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-4" />
-                 <h3 className="text-center font-bold text-white mb-4">Update Profile Photo</h3>
+             <div className="relative bg-brand-surface rounded-t-3xl p-6 space-y-3 animate-slide-up border-t border-brand-border">
+                 <div className="w-12 h-1.5 bg-brand-border rounded-full mx-auto mb-4" />
+                 <h3 className="text-center font-bold text-brand-light mb-4">Update Profile Photo</h3>
                  
-                 <button onClick={() => { setShowImageOptions(false); setIsCameraOpen(true); }} className="w-full py-4 rounded-xl bg-[#2C2C2E] text-white font-medium flex items-center justify-center gap-2 active:scale-95 transition-transform hover:bg-[#3A3A3C]">
+                 <button onClick={() => { setShowImageOptions(false); setIsCameraOpen(true); }} className="w-full py-4 rounded-xl bg-brand-surface-highlight text-brand-light font-medium flex items-center justify-center gap-2 active:scale-95 transition-transform hover:bg-brand-border">
                      <CameraIcon /> {t('imagePicker.takePhoto')}
                  </button>
                  
-                 <button onClick={() => { setShowImageOptions(false); fileInputRef.current?.click(); }} className="w-full py-4 rounded-xl bg-[#2C2C2E] text-white font-medium flex items-center justify-center gap-2 active:scale-95 transition-transform hover:bg-[#3A3A3C]">
+                 <button onClick={() => { setShowImageOptions(false); fileInputRef.current?.click(); }} className="w-full py-4 rounded-xl bg-brand-surface-highlight text-brand-light font-medium flex items-center justify-center gap-2 active:scale-95 transition-transform hover:bg-brand-border">
                      <ArrowUpTrayIcon /> {t('imagePicker.chooseLibrary')}
                  </button>
                  
-                 <button onClick={() => setShowImageOptions(false)} className="w-full py-4 rounded-xl bg-black text-red-400 font-medium active:scale-95 transition-transform mt-2">
+                 <button onClick={() => setShowImageOptions(false)} className="w-full py-4 rounded-xl bg-brand-dark text-red-400 font-medium active:scale-95 transition-transform mt-2">
                      {t('imagePicker.cancel')}
                  </button>
              </div>

@@ -27,7 +27,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setActiveScreen, tasks, current
       {/* Header Section */}
       <div className="animate-in flex items-center justify-between" style={{ animationDelay: '0ms' }}>
         <div>
-            <h1 className="text-4xl font-bold text-white tracking-tight">{getGreeting()}</h1>
+            <h1 className="text-4xl font-bold text-brand-light tracking-tight">{getGreeting()}</h1>
             <p className="text-brand-secondary text-lg mt-1 font-medium">{currentUser?.name || t('home.defaultParentName')}</p>
         </div>
         
@@ -43,10 +43,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setActiveScreen, tasks, current
                 )}
             </div>
             {/* Tooltip */}
-            <div className="absolute top-full right-0 mt-2 px-3 py-1.5 bg-[#2C2C2E] border border-white/10 rounded-lg shadow-xl opacity-0 translate-y-[-5px] group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 pointer-events-none whitespace-nowrap z-50 backdrop-blur-md">
-                <span className="text-xs font-bold text-white">{t('nav.settings')}</span>
+            <div className="absolute top-full right-0 mt-2 px-3 py-1.5 bg-brand-surface-highlight border border-brand-border rounded-lg shadow-xl opacity-0 translate-y-[-5px] group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 pointer-events-none whitespace-nowrap z-50 backdrop-blur-md">
+                <span className="text-xs font-bold text-brand-light">{t('nav.settings')}</span>
                 {/* Little triangle pointer */}
-                <div className="absolute bottom-full right-4 border-l-[6px] border-r-[6px] border-b-[6px] border-l-transparent border-r-transparent border-b-[#2C2C2E]"></div>
+                <div className="absolute bottom-full right-4 border-l-[6px] border-r-[6px] border-b-[6px] border-l-transparent border-r-transparent border-b-brand-surface-highlight"></div>
             </div>
         </div>
       </div>
@@ -54,7 +54,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setActiveScreen, tasks, current
       {/* Deadlines Widget */}
       <div className="animate-in" style={{ animationDelay: '100ms' }}>
         <div className="flex justify-between items-end mb-4 px-1">
-            <h2 className="text-xl font-bold text-white tracking-wide">{t('home.upcomingDeadlines')}</h2>
+            <h2 className="text-xl font-bold text-brand-light tracking-wide">{t('home.upcomingDeadlines')}</h2>
             <button onClick={() => setActiveScreen(Screen.Tasks)} className="text-sm font-medium text-brand-primary active:opacity-60 transition-opacity">
                 {t('home.view')}
             </button>
@@ -74,7 +74,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setActiveScreen, tasks, current
                   <div className="flex items-center gap-4">
                       <div className={`w-2 h-10 rounded-full ${isPastDue ? 'bg-brand-danger' : 'bg-brand-primary'}`}></div>
                       <div>
-                        <p className="font-semibold text-white text-base">{task.title}</p>
+                        <p className="font-semibold text-brand-light text-base">{task.title}</p>
                         <p className={`text-sm ${isPastDue ? 'text-brand-danger font-medium' : 'text-brand-secondary'}`}>
                             {new Date(task.dueDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
                             {isPastDue && ` • ${t('tasks.pastDue')}`}
@@ -100,7 +100,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setActiveScreen, tasks, current
 
       {/* Quick Actions Grid */}
       <div>
-        <h2 className="text-xl font-bold text-white tracking-wide mb-4 px-1">{t('nav.home')}</h2>
+        <h2 className="text-xl font-bold text-brand-light tracking-wide mb-4 px-1">{t('nav.home')}</h2>
         <div className="grid grid-cols-2 gap-4 animate-in" style={{ animationDelay: '200ms' }}>
             <ActionButton
             icon={<DocumentTextIcon />}
@@ -151,7 +151,7 @@ const ActionButton: React.FC<ActionButtonProps> = ({ icon, title, color, onClick
     <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white shadow-lg ${color} ${fullWidth ? 'mb-0' : 'mb-3'}`}>
         {icon}
     </div>
-    <span className="text-lg font-bold text-white z-10">{title}</span>
+    <span className="text-lg font-bold text-brand-light z-10">{title}</span>
   </button>
 );
 

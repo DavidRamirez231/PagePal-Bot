@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -11,21 +12,21 @@
         theme: {
           extend: {
             colors: {
-              'brand-dark': '#000000', /* Pitch black for OLED feel */
-              'brand-surface': '#1C1C1E', /* iOS Dark Gray */
-              'brand-surface-highlight': '#2C2C2E',
-              'brand-border': '#3A3A3C',
-              'brand-primary': '#0A84FF', /* iOS Blue */
+              'brand-dark': 'rgb(var(--color-brand-dark) / <alpha-value>)',
+              'brand-surface': 'rgb(var(--color-brand-surface) / <alpha-value>)',
+              'brand-surface-highlight': 'rgb(var(--color-brand-surface-highlight) / <alpha-value>)',
+              'brand-border': 'rgb(var(--color-brand-border) / <alpha-value>)',
+              'brand-primary': 'rgb(var(--color-brand-primary) / <alpha-value>)',
               'brand-primary-hover': '#409CFF',
-              'brand-secondary': '#8E8E93',
-              'brand-light': '#F2F2F7',
+              'brand-secondary': 'rgb(var(--color-brand-secondary) / <alpha-value>)',
+              'brand-light': 'rgb(var(--color-brand-light) / <alpha-value>)',
               'brand-danger': '#FF453A',
             },
             fontFamily: {
               sans: ['-apple-system', 'BlinkMacSystemFont', 'Inter', 'sans-serif'],
             },
             boxShadow: {
-              'glow': '0 0 20px rgba(10, 132, 255, 0.3)',
+              'glow': '0 0 20px rgba(var(--color-brand-primary), 0.3)',
               'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
             },
             animation: {
@@ -82,6 +83,26 @@
     }
     </script>
     <style>
+      :root {
+        --color-brand-dark: 0 0 0;
+        --color-brand-surface: 28 28 30;
+        --color-brand-surface-highlight: 44 44 46;
+        --color-brand-border: 58 58 60;
+        --color-brand-primary: 10 132 255;
+        --color-brand-light: 242 242 247;
+        --color-brand-secondary: 142 142 147;
+      }
+
+      .light-mode {
+        --color-brand-dark: 242 242 247;
+        --color-brand-surface: 255 255 255;
+        --color-brand-surface-highlight: 229 229 234;
+        --color-brand-border: 209 209 214;
+        --color-brand-primary: 0 122 255;
+        --color-brand-light: 0 0 0;
+        --color-brand-secondary: 110 110 115;
+      }
+
       /* Hide scrollbar for Chrome, Safari and Opera */
       .scrollbar-hide::-webkit-scrollbar { display: none; }
       /* Hide scrollbar for IE, Edge and Firefox */
@@ -96,14 +117,14 @@
       input, textarea, select { font-size: 16px; }
       
       .glass-panel {
-        background: rgba(28, 28, 30, 0.7);
+        background: rgba(var(--color-brand-surface), 0.7);
         backdrop-filter: blur(20px);
         -webkit-backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(var(--color-brand-light), 0.08);
       }
     </style>
   </head>
-  <body class="bg-brand-dark text-brand-light font-sans antialiased selection:bg-brand-primary selection:text-white overflow-hidden fixed inset-0">
+  <body class="bg-brand-dark text-brand-light font-sans antialiased selection:bg-brand-primary selection:text-white overflow-hidden fixed inset-0 transition-colors duration-300">
     <div id="root" class="h-full overflow-hidden"></div>
   </body>
 </html>

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import type { Form, KidProfile, ProcessedEmail } from '../../types';
 import { processFormWithGemini, processEmailWithGemini, processEmailImageWithGemini } from '../../services/geminiService';
-import { PlusIcon, TrashIcon, ArrowUpTrayIcon, EnvelopeIcon, CameraIcon, MagnifyingGlassIcon, ChevronLeftIcon, CheckCircleIcon, SpinnerIcon, CalendarIcon, ClockIcon } from '../Icons';
+import { PlusIcon, TrashIcon, ArrowUpTrayIcon, EnvelopeIcon, CameraIcon, MagnifyingGlassIcon, ChevronLeftIcon, CheckCircleIcon, SpinnerIcon, CalendarIcon } from '../Icons';
 import ConfirmationModal from '../ConfirmationModal';
 import { useLanguage } from '../../contexts/LanguageContext';
 import CameraOverlay from '../CameraOverlay';
@@ -317,17 +317,11 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
   const getStatusBadge = (status: string) => {
     switch (status) {
         case 'pending':
-            return <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md bg-yellow-500/20 text-yellow-500 border border-yellow-500/20">
-                <div className="w-3 h-3"><ClockIcon /></div> {t('forms.statusPending')}
-            </span>;
+            return <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md bg-yellow-500/20 text-yellow-500 border border-yellow-500/20">{t('forms.statusPending')}</span>;
         case 'completed':
-            return <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md bg-green-500/20 text-green-500 border border-green-500/20">
-                <div className="w-3 h-3"><CheckCircleIcon /></div> {t('forms.statusCompleted')}
-            </span>;
+            return <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md bg-green-500/20 text-green-500 border border-green-500/20">{t('forms.statusCompleted')}</span>;
         case 'deleted':
-            return <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md bg-red-500/20 text-red-500 border border-red-500/20">
-                <div className="w-3 h-3"><TrashIcon /></div> {t('forms.statusDeleted')}
-            </span>;
+            return <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md bg-red-500/20 text-red-500 border border-red-500/20">{t('forms.statusDeleted')}</span>;
         default:
             return null;
     }

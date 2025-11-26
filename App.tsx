@@ -11,6 +11,7 @@ import AuthScreen from './components/screens/AuthScreen';
 import type { KidProfile, Form, Task, User, ProcessedEmail, ManualTask } from './types';
 import { Screen } from './types';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 
 const AppContent: React.FC = () => {
   const { language, t } = useLanguage();
@@ -243,7 +244,7 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className="h-full bg-brand-dark text-brand-light flex flex-col font-sans">
+    <div className="h-full bg-brand-dark text-brand-light flex flex-col font-sans transition-colors duration-300">
         {/* Main Content Area */}
         <main className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide pb-24 pt-safe-top px-4">
              {/* Keyed div triggers React reconciliation and CSS animation on change */}
@@ -263,7 +264,9 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => (
   <LanguageProvider>
-    <AppContent />
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
   </LanguageProvider>
 );
 

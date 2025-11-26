@@ -189,3 +189,62 @@ export const processEmailWithGemini = async (
         throw new Error("Failed to analyze the email. The AI model might be busy or the content could not be processed. Please try again.");
     }
 };
+
+export const processEmailImageWithGemini = async (
+    imageDataUrl: string,
+    kidName: string
+): Promise<{ label: string; summary: string; actionItems: string[]; dueDate: string | null }> => {
+    const model = 'gemini-2.5-flash';
+    const base64Data = imageDataUrl.split(',')[1];
+    const mimeType = imageDataUrl.match(/data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+).*,.*/)?.[1] || 'image/jpeg';
+    const imagePart = fileToGenerativePart(base64Data, mimeType);
+
+    const prompt = `
+      You are an expert at analyzing communications for parents.
+      Analyze this image of an email or school announcement which is for a child named ${kidName}.
+
+      First, create a short, descriptive label (max 10 words). Example: "Permission Slip for Zoo Field Trip".
+      
+      Second, provide a concise summary of the key information.
+      
+      Third, extract a list of specific action items or instructions the parent needs to follow (e.g., "Sign permission slip", "Send $5 cash").
+
+      Fourth, identify if there is a specific due date or event date mentioned. If so, return it in YYYY-MM-DD format. If not, return null.
+    `;
+
+    try {
+        const response = await ai.models.generateContent({
+            model,
+            contents: { parts: [imagePart, { text: prompt }] },
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        label: { type: Type.STRING },
+                        summary: { type: Type.STRING },
+                        actionItems: { 
+                            type: Type.ARRAY, 
+                            items: { type: Type.STRING }
+                        },
+                        dueDate: { type: Type.STRING }
+                    },
+                    required: ['label', 'summary', 'actionItems']
+                }
+            }
+        });
+
+        const jsonText = response.text.trim();
+        const parsedJson = JSON.parse(jsonText);
+        
+        return {
+            label: parsedJson.label || 'Untitled Email',
+            summary: parsedJson.summary || 'No summary could be generated.',
+            actionItems: parsedJson.actionItems || [],
+            dueDate: parsedJson.dueDate || null
+        };
+    } catch (error) {
+        console.error("Error processing email image with Gemini:", error);
+        throw new Error("Failed to analyze the email image. Please try again.");
+    }
+};
