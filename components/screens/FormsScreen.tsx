@@ -83,16 +83,21 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
   // Cycle loading messages for AI processing
   useEffect(() => {
     if (screenState === 'processing' || emailStep === 'processing') {
-      const messages = ['Uploading...', 'Analyzing text...', 'Extracting dates...', 'Translating summary...'];
+      const messages = [
+        t('forms.analyzingImage'),
+        t('forms.extractingInfo'),
+        t('forms.generatingSummary'),
+        t('forms.finalizing')
+      ];
       let i = 0;
       setLoadingMessage(messages[0]);
       const interval = setInterval(() => {
         i = (i + 1) % messages.length;
         setLoadingMessage(messages[i]);
-      }, 1200);
+      }, 1500);
       return () => clearInterval(interval);
     }
-  }, [screenState, emailStep]);
+  }, [screenState, emailStep, t]);
 
   /* --- Handlers --- */
   const handleScan = async () => {
@@ -317,17 +322,11 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
   const getStatusBadge = (status: string) => {
     switch (status) {
         case 'pending':
-            return <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md bg-yellow-500/20 text-yellow-500 border border-yellow-500/20">
-                <div className="w-3 h-3"><ClockIcon /></div> {t('forms.statusPending')}
-            </span>;
+            return <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md bg-yellow-500/20 text-yellow-500 border border-yellow-500/20">{t('forms.statusPending')}</span>;
         case 'completed':
-            return <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md bg-green-500/20 text-green-500 border border-green-500/20">
-                <div className="w-3 h-3"><CheckCircleIcon /></div> {t('forms.statusCompleted')}
-            </span>;
+            return <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md bg-green-500/20 text-green-500 border border-green-500/20">{t('forms.statusCompleted')}</span>;
         case 'deleted':
-            return <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md bg-red-500/20 text-red-500 border border-red-500/20">
-                <div className="w-3 h-3"><TrashIcon /></div> {t('forms.statusDeleted')}
-            </span>;
+            return <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md bg-red-500/20 text-red-500 border border-red-500/20">{t('forms.statusDeleted')}</span>;
         default:
             return null;
     }
