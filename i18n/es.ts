@@ -114,6 +114,9 @@ export const es = {
     selectAll: 'Seleccionar Todo',
     select: 'Seleccionar',
     deselect: 'Deseleccionar',
+    addNew: '+ Crear Nueva',
+    selectExisting: 'Seleccionar Existente',
+    enterCategory: 'Nombre de categoría...',
   },
   emails: {
     title: 'Archivo de Correos',

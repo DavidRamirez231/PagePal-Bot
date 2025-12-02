@@ -114,6 +114,9 @@ export const en = {
     selectAll: 'Select All',
     select: 'Select',
     deselect: 'Deselect',
+    addNew: '+ Add New',
+    selectExisting: 'Select Existing',
+    enterCategory: 'Enter category name...',
   },
   emails: {
     title: 'Email Archive',

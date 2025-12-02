@@ -13,8 +13,6 @@ type ReviewingForm = Partial<Omit<Form, 'summary' | 'actionItems'>> & {
     actionItems?: { en: string[]; es: string[] } | string[];
 };
 
-const formCategories = ['School', 'Medical', 'Activities', 'Other'];
-
 interface FormsScreenProps {
   forms: Form[];
   setForms: React.Dispatch<React.SetStateAction<Form[]>>;
@@ -47,6 +45,20 @@ const ModalSheet: React.FC<{ isOpen: boolean; onClose: () => void; children: Rea
     );
 }
 
+const FormSkeleton = () => (
+    <div className="glass-panel p-4 rounded-2xl flex gap-4 items-center animate-pulse">
+        <div className="w-6 h-6 rounded-full bg-brand-surface-highlight"></div>
+        <div className="w-16 h-16 rounded-xl bg-brand-surface-highlight"></div>
+        <div className="flex-1 space-y-2">
+            <div className="flex justify-between">
+                <div className="h-4 w-1/3 bg-brand-surface-highlight rounded"></div>
+                <div className="h-5 w-16 bg-brand-surface-highlight rounded"></div>
+            </div>
+            <div className="h-3 w-3/4 bg-brand-surface-highlight rounded"></div>
+        </div>
+    </div>
+);
+
 const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails, setEmails }) => {
   const { language, t } = useLanguage();
   const [screenState, setScreenState] = useState<FormScreenState>('list');
@@ -55,7 +67,9 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
   const [selectedKidId, setSelectedKidId] = useState<string>('');
   const [imagePreview, setImagePreview] = useState<string>('');
   const [dueDate, setDueDate] = useState<string>('');
-  const [category, setCategory] = useState<string>(formCategories[0]);
+  const [availableCategories, setAvailableCategories] = useState(['School', 'Medical', 'Activities', 'Other']);
+  const [category, setCategory] = useState<string>(availableCategories[0]);
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [reviewLanguage, setReviewLanguage] = useState<'en' | 'es'>(language);
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -64,6 +78,7 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
   const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
   
   // Loading States
+  const [isListLoading, setIsListLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState<string>('');
@@ -79,6 +94,13 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
   const [selectedItem, setSelectedItem] = useState<{ type: 'form' | 'email', data: any } | null>(null);
 
   useEffect(() => setSelectedIds(new Set()), [view]);
+
+  // Simulate data fetching when switching views
+  useEffect(() => {
+    setIsListLoading(true);
+    const timer = setTimeout(() => setIsListLoading(false), 350);
+    return () => clearTimeout(timer);
+  }, [view]);
 
   // Cycle loading messages for AI processing
   useEffect(() => {
@@ -102,8 +124,15 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
   /* --- Handlers --- */
   const handleScan = async () => {
     if (!selectedKidId || !imagePreview) return setError("Please fill all fields");
+    if (!category) return setError("Please select or enter a category");
+    
     const selectedKid = kids.find(k => k.id === selectedKidId);
     if (!selectedKid) return;
+
+    // Add new category to list if it doesn't exist
+    if (category && !availableCategories.includes(category)) {
+        setAvailableCategories(prev => [...prev, category]);
+    }
 
     setError(null);
     setScreenState('processing');
@@ -181,6 +210,7 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
       setSelectedKidId('');
       setImagePreview('');
       setDueDate('');
+      setIsAddingCategory(false);
       setIsCameraActive(false);
       setSelectedItem(null);
   };
@@ -431,30 +461,38 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
                         <span className="font-semibold text-brand-light group-hover:text-brand-primary transition-colors">{t('forms.scanNewForm')}</span>
                     </button>
 
-                    {filteredForms.map(form => (
-                        <div key={form.id} onClick={() => { setSelectedItem({ type: 'form', data: form }); setScreenState('details'); }} className="glass-panel p-4 rounded-2xl active:scale-[0.98] transition-all cursor-pointer flex gap-4 items-center group">
-                            <div className="relative group/select z-20">
-                                <div onClick={(e) => { e.stopPropagation(); toggleSelection(form.id); }} className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${selectedIds.has(form.id) ? 'bg-brand-primary border-brand-primary' : 'border-gray-500'}`}>
-                                    {selectedIds.has(form.id) && <div className="w-2.5 h-2.5 bg-white rounded-full" />}
-                                </div>
-                                {/* Tooltip */}
-                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-brand-surface-highlight border border-brand-border rounded-lg shadow-xl opacity-0 translate-y-1 group-hover/select:opacity-100 group-hover/select:translate-y-0 transition-all duration-200 pointer-events-none whitespace-nowrap z-50 backdrop-blur-md">
-                                    <span className="text-xs font-bold text-brand-light">{selectedIds.has(form.id) ? t('forms.deselect') : t('forms.select')}</span>
-                                    {/* Triangle */}
-                                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-l-[6px] border-r-[6px] border-t-[6px] border-l-transparent border-r-transparent border-t-brand-surface-highlight"></div>
-                                </div>
-                            </div>
-                            
-                            <img src={form.imageDataUrl} className="w-16 h-16 rounded-xl object-cover bg-black border border-white/5" />
-                            <div className="flex-1 min-w-0">
-                                <div className="flex justify-between items-start mb-1">
-                                    <h3 className="font-semibold text-brand-light truncate pr-2">{form.formName}</h3>
-                                    {getStatusBadge(form.status)}
-                                </div>
-                                <p className="text-sm text-gray-400 truncate">{form.summary}</p>
-                            </div>
+                    {isListLoading ? (
+                        <div className="space-y-3">
+                            <FormSkeleton />
+                            <FormSkeleton />
+                            <FormSkeleton />
                         </div>
-                    ))}
+                    ) : (
+                        filteredForms.map(form => (
+                            <div key={form.id} onClick={() => { setSelectedItem({ type: 'form', data: form }); setScreenState('details'); }} className="glass-panel p-4 rounded-2xl active:scale-[0.98] transition-all cursor-pointer flex gap-4 items-center group">
+                                <div className="relative group/select z-20">
+                                    <div onClick={(e) => { e.stopPropagation(); toggleSelection(form.id); }} className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${selectedIds.has(form.id) ? 'bg-brand-primary border-brand-primary' : 'border-gray-500'}`}>
+                                        {selectedIds.has(form.id) && <div className="w-2.5 h-2.5 bg-white rounded-full" />}
+                                    </div>
+                                    {/* Tooltip */}
+                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-brand-surface-highlight border border-brand-border rounded-lg shadow-xl opacity-0 translate-y-1 group-hover/select:opacity-100 group-hover/select:translate-y-0 transition-all duration-200 pointer-events-none whitespace-nowrap z-50 backdrop-blur-md">
+                                        <span className="text-xs font-bold text-brand-light">{selectedIds.has(form.id) ? t('forms.deselect') : t('forms.select')}</span>
+                                        {/* Triangle */}
+                                        <div className="absolute top-full left-1/2 -translate-x-1/2 border-l-[6px] border-r-[6px] border-t-[6px] border-l-transparent border-r-transparent border-t-brand-surface-highlight"></div>
+                                    </div>
+                                </div>
+                                
+                                <img src={form.imageDataUrl} className="w-16 h-16 rounded-xl object-cover bg-black border border-white/5" />
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex justify-between items-start mb-1">
+                                        <h3 className="font-semibold text-brand-light truncate pr-2">{form.formName}</h3>
+                                        {getStatusBadge(form.status)}
+                                    </div>
+                                    <p className="text-sm text-gray-400 truncate">{form.summary}</p>
+                                </div>
+                            </div>
+                        ))
+                    )}
                 </>
             )}
 
@@ -476,71 +514,89 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
                         <span className="font-semibold text-brand-light group-hover:text-purple-500 transition-colors">{t('emails.addEmail')}</span>
                     </button>
 
-                    {filteredEmails.map(email => (
-                        <div key={email.id} onClick={() => { setSelectedItem({ type: 'email', data: email }); setScreenState('details'); }} className="glass-panel p-4 rounded-2xl active:scale-[0.98] transition-all cursor-pointer flex gap-4 items-center group">
-                            <div className="relative group/select z-20">
-                                <div onClick={(e) => { e.stopPropagation(); toggleSelection(email.id); }} className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${selectedIds.has(email.id) ? 'bg-brand-primary border-brand-primary' : 'border-gray-500'}`}>
-                                    {selectedIds.has(email.id) && <div className="w-2.5 h-2.5 bg-white rounded-full" />}
-                                </div>
-                                {/* Tooltip */}
-                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-brand-surface-highlight border border-brand-border rounded-lg shadow-xl opacity-0 translate-y-1 group-hover/select:opacity-100 group-hover/select:translate-y-0 transition-all duration-200 pointer-events-none whitespace-nowrap z-50 backdrop-blur-md">
-                                    <span className="text-xs font-bold text-brand-light">{selectedIds.has(email.id) ? t('forms.deselect') : t('forms.select')}</span>
-                                    {/* Triangle */}
-                                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-l-[6px] border-r-[6px] border-t-[6px] border-l-transparent border-r-transparent border-t-brand-surface-highlight"></div>
-                                </div>
-                            </div>
-                            <div className="w-16 h-16 rounded-xl bg-brand-primary/20 flex items-center justify-center text-brand-primary flex-shrink-0">
-                                <EnvelopeIcon />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <h3 className="font-semibold text-brand-light truncate">{email.label}</h3>
-                                <p className="text-sm text-gray-400 truncate mt-1">{email.summary}</p>
-                            </div>
+                    {isListLoading ? (
+                        <div className="space-y-3">
+                            <FormSkeleton />
+                            <FormSkeleton />
+                            <FormSkeleton />
                         </div>
-                    ))}
+                    ) : (
+                        filteredEmails.map(email => (
+                            <div key={email.id} onClick={() => { setSelectedItem({ type: 'email', data: email }); setScreenState('details'); }} className="glass-panel p-4 rounded-2xl active:scale-[0.98] transition-all cursor-pointer flex gap-4 items-center group">
+                                <div className="relative group/select z-20">
+                                    <div onClick={(e) => { e.stopPropagation(); toggleSelection(email.id); }} className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${selectedIds.has(email.id) ? 'bg-brand-primary border-brand-primary' : 'border-gray-500'}`}>
+                                        {selectedIds.has(email.id) && <div className="w-2.5 h-2.5 bg-white rounded-full" />}
+                                    </div>
+                                    {/* Tooltip */}
+                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-brand-surface-highlight border border-brand-border rounded-lg shadow-xl opacity-0 translate-y-1 group-hover/select:opacity-100 group-hover/select:translate-y-0 transition-all duration-200 pointer-events-none whitespace-nowrap z-50 backdrop-blur-md">
+                                        <span className="text-xs font-bold text-brand-light">{selectedIds.has(email.id) ? t('forms.deselect') : t('forms.select')}</span>
+                                        {/* Triangle */}
+                                        <div className="absolute top-full left-1/2 -translate-x-1/2 border-l-[6px] border-r-[6px] border-t-[6px] border-l-transparent border-r-transparent border-t-brand-surface-highlight"></div>
+                                    </div>
+                                </div>
+                                <div className="w-16 h-16 rounded-xl bg-brand-primary/20 flex items-center justify-center text-brand-primary flex-shrink-0">
+                                    <EnvelopeIcon />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <h3 className="font-semibold text-brand-light truncate">{email.label}</h3>
+                                    <p className="text-sm text-gray-400 truncate mt-1">{email.summary}</p>
+                                </div>
+                            </div>
+                        ))
+                    )}
                 </>
             )}
 
             {/* History List */}
-            {view === 'history' && filteredForms.map(form => (
-                 <div key={form.id} onClick={() => { setSelectedItem({ type: 'form', data: form }); setScreenState('details'); }} className="glass-panel p-4 rounded-2xl active:scale-[0.98] transition-all cursor-pointer flex gap-4 items-center group opacity-80 hover:opacity-100">
-                    <div className="relative group/select z-20">
-                        <div onClick={(e) => { e.stopPropagation(); toggleSelection(form.id); }} className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${selectedIds.has(form.id) ? 'bg-brand-primary border-brand-primary' : 'border-gray-500'}`}>
-                            {selectedIds.has(form.id) && <div className="w-2.5 h-2.5 bg-white rounded-full" />}
-                        </div>
-                         {/* Tooltip */}
-                         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-brand-surface-highlight border border-brand-border rounded-lg shadow-xl opacity-0 translate-y-1 group-hover/select:opacity-100 group-hover/select:translate-y-0 transition-all duration-200 pointer-events-none whitespace-nowrap z-50 backdrop-blur-md">
-                            <span className="text-xs font-bold text-brand-light">{selectedIds.has(form.id) ? t('forms.deselect') : t('forms.select')}</span>
-                             {/* Triangle */}
-                             <div className="absolute top-full left-1/2 -translate-x-1/2 border-l-[6px] border-r-[6px] border-t-[6px] border-l-transparent border-r-transparent border-t-brand-surface-highlight"></div>
-                        </div>
+            {view === 'history' && (
+                 isListLoading ? (
+                     <div className="space-y-3">
+                        <FormSkeleton />
+                        <FormSkeleton />
+                        <FormSkeleton />
                     </div>
-                    
-                    <img src={form.imageDataUrl} className="w-16 h-16 rounded-xl object-cover bg-black grayscale" />
-                    <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-start mb-1">
-                            <h3 className="font-semibold text-brand-light truncate pr-2">{form.formName}</h3>
-                            {getStatusBadge(form.status)}
+                 ) : (
+                    filteredForms.map(form => (
+                        <div key={form.id} onClick={() => { setSelectedItem({ type: 'form', data: form }); setScreenState('details'); }} className="glass-panel p-4 rounded-2xl active:scale-[0.98] transition-all cursor-pointer flex gap-4 items-center group opacity-80 hover:opacity-100">
+                            <div className="relative group/select z-20">
+                                <div onClick={(e) => { e.stopPropagation(); toggleSelection(form.id); }} className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${selectedIds.has(form.id) ? 'bg-brand-primary border-brand-primary' : 'border-gray-500'}`}>
+                                    {selectedIds.has(form.id) && <div className="w-2.5 h-2.5 bg-white rounded-full" />}
+                                </div>
+                                {/* Tooltip */}
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-brand-surface-highlight border border-brand-border rounded-lg shadow-xl opacity-0 translate-y-1 group-hover/select:opacity-100 group-hover/select:translate-y-0 transition-all duration-200 pointer-events-none whitespace-nowrap z-50 backdrop-blur-md">
+                                    <span className="text-xs font-bold text-brand-light">{selectedIds.has(form.id) ? t('forms.deselect') : t('forms.select')}</span>
+                                    {/* Triangle */}
+                                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-l-[6px] border-r-[6px] border-t-[6px] border-l-transparent border-r-transparent border-t-brand-surface-highlight"></div>
+                                </div>
+                            </div>
+                            
+                            <img src={form.imageDataUrl} className="w-16 h-16 rounded-xl object-cover bg-black grayscale" />
+                            <div className="flex-1 min-w-0">
+                                <div className="flex justify-between items-start mb-1">
+                                    <h3 className="font-semibold text-brand-light truncate pr-2">{form.formName}</h3>
+                                    {getStatusBadge(form.status)}
+                                </div>
+                                <p className="text-sm text-gray-400 truncate">{form.summary}</p>
+                            </div>
                         </div>
-                        <p className="text-sm text-gray-400 truncate">{form.summary}</p>
-                    </div>
-                 </div>
-            ))}
+                    ))
+                 )
+            )}
 
             {/* Empty States */}
-            {view === 'active' && filteredForms.length === 0 && (
+            {!isListLoading && view === 'active' && filteredForms.length === 0 && (
                 <div className="text-center py-12 opacity-50">
                     <p className="text-lg font-medium text-brand-light">{t('forms.noActiveForms')}</p>
                     <p className="text-sm text-brand-secondary">{t('forms.noActiveFormsDesc')}</p>
                 </div>
             )}
-             {view === 'history' && filteredForms.length === 0 && (
+             {!isListLoading && view === 'history' && filteredForms.length === 0 && (
                 <div className="text-center py-12 opacity-50">
                     <p className="text-lg font-medium text-brand-light">{t('forms.noHistory')}</p>
                     <p className="text-sm text-brand-secondary">{t('forms.noHistoryDesc')}</p>
                 </div>
             )}
-            {view === 'emails' && filteredEmails.length === 0 && (
+            {!isListLoading && view === 'emails' && filteredEmails.length === 0 && (
                 <div className="text-center py-12 opacity-50">
                     <p className="text-lg font-medium text-brand-light">{t('emails.noEmails')}</p>
                     <p className="text-sm text-brand-secondary">{t('emails.noEmailsDesc')}</p>
@@ -599,10 +655,30 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
                          </select>
                      </div>
                      <div>
-                         <label className={labelStyle}>{t('forms.category')}</label>
-                         <select value={category} onChange={e => setCategory(e.target.value)} className={inputStyle}>
-                             {formCategories.map(c => <option key={c} value={c}>{c}</option>)}
-                         </select>
+                         <div className="flex justify-between items-center mb-1">
+                             <label className={labelStyle}>{t('forms.category')}</label>
+                             <button onClick={() => {
+                                 setIsAddingCategory(!isAddingCategory);
+                                 if (!isAddingCategory) setCategory('');
+                                 else setCategory(availableCategories[0]);
+                             }} className="text-xs text-brand-primary font-bold hover:underline">
+                                {isAddingCategory ? t('forms.selectExisting') : t('forms.addNew')}
+                             </button>
+                         </div>
+                         {isAddingCategory ? (
+                             <input 
+                                type="text" 
+                                value={category} 
+                                onChange={e => setCategory(e.target.value)} 
+                                placeholder={t('forms.enterCategory')}
+                                className={inputStyle}
+                                autoFocus
+                             />
+                         ) : (
+                             <select value={availableCategories.includes(category) ? category : ''} onChange={e => setCategory(e.target.value)} className={inputStyle}>
+                                 {availableCategories.map(c => <option key={c} value={c}>{c}</option>)}
+                             </select>
+                         )}
                      </div>
                      <div>
                         <label className={labelStyle}>{t('forms.dueDateOptional')}</label>
@@ -610,7 +686,7 @@ const FormsScreen: React.FC<FormsScreenProps> = ({ forms, setForms, kids, emails
                      </div>
                  </div>
 
-                 <button onClick={handleScan} disabled={!imagePreview || !selectedKidId} className="w-full bg-brand-primary text-white py-4 rounded-2xl font-bold text-lg shadow-glow active:scale-95 transition-transform disabled:opacity-50 disabled:scale-100">
+                 <button onClick={handleScan} disabled={!imagePreview || !selectedKidId || !category} className="w-full bg-brand-primary text-white py-4 rounded-2xl font-bold text-lg shadow-glow active:scale-95 transition-transform disabled:opacity-50 disabled:scale-100">
                      {t('forms.scanForm')}
                  </button>
              </div>
